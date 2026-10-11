@@ -110,6 +110,9 @@ textarea { resize: vertical; font: 400 13px/1.45 var(--font-data); }
 .editor { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
 .editor input { flex: 1 1 180px; font-family: var(--font-data); font-size: 13px; }
 .editor .hint { flex-basis: 100%; }
+.caught { flex-basis: 100%; min-width: 0; font-size: 13px; color: var(--muted); }
+.caught summary { cursor: pointer; }
+.caught pre { margin: 6px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font: 400 12px/1.45 var(--font-data); color: var(--ink); max-height: 14em; overflow: auto; }
 @media (max-width: 560px) {
   .game { grid-template-columns: auto minmax(0, 1fr); }
   .game-actions { grid-column: 2; justify-content: flex-start; }
@@ -289,6 +292,46 @@ td.num { font: 400 13px/1.5 var(--font-data); }
   const chars = s => Array.from(s);
   const trimNum = s => s.replace(/[.,]+$/, '');
 
+  /* What each game's final score is out of. A share text can list every round; only the total counts. */
+  const TOTALS = { wordle: 6, tradle: 6, guessthegame: 6, angle: 4, timeguessr: 50000, anno: 500, chainle: 5000, pokedoku: 9 };
+  const guesses = n => n + (n === '1' ? ' guess' : ' guesses');
+
+  function fractions(t) {
+    const out = [];
+    for (const m of t.matchAll(/(?<![\w\/.,])(\d[\d,.]*|X)\s*\/\s*(\d[\d,.]*)(?![\d\/])/gi)) {
+      const a = trimNum(m[1]).toUpperCase(), b = trimNum(m[2]);
+      out.push({ text: a + '/' + b, den: Number(b.replace(/[,.](?=\d{3}\b)/g, '').replace(/,/g, '')) });
+    }
+    return out.filter(f => f.den > 0);
+  }
+
+  function labelled(t) {
+    for (const l of ['final score', 'total score', 'overall score', 'your score', 'total', 'overall', 'final', 'score', 'result']) {
+      const m = t.match(new RegExp('\\b' + l + '\\b\\s*(?:is|was|of|[:=–—-])?\\s*((?:\\d[\\d,.]*(?:\\s*\\/\\s*\\d[\\d,.]*)?|X\\s*\\/\\s*\\d[\\d,.]*)(?:\\s?(?:[×%]|pts\\b|points\\b))?)', 'i'));
+      if (m) return trimNum(m[1].replace(/\s+/g, ' ').trim());
+    }
+    return '';
+  }
+
+  /* Fermi lists a multiple per question plus an overall one. The overall is the geometric mean of the three. */
+  function fermiScore(t) {
+    const all = [...t.matchAll(/([<>≤≥↑↓⬆⬇🔺🔻🔼🔽]️?\s*)?(\d+(?:\.\d+)?)\s*[×x✕✖](?![a-z])/giu)]
+      .map(m => ({ v: m[2], n: Number(m[2]), marked: !!m[1] })).filter(c => c.n > 0);
+    if (!all.length) return '';
+    if (all.length === 1) return all[0].v + '×';
+    const mean = list => Math.exp(list.reduce((s, c) => s + Math.log(c.n), 0) / list.length);
+    if (all.length >= 4) {
+      const fits = all.filter((c, i) => Math.abs(mean(all.filter((_, j) => j !== i)) - c.n) / c.n < 0.02);
+      if (fits.length === 1) return fits[0].v + '×';
+    }
+    const lab = t.match(/\b(?:final|overall|total|average|score|result)\b[^\d\n<>]{0,12}(\d+(?:\.\d+)?)\s*[×x✕✖]/i);
+    if (lab) return lab[1] + '×';
+    if (all.length === 3) return mean(all).toFixed(2) + '×';
+    const plain = all.filter(c => !c.marked);
+    if (plain.length === 1) return plain[0].v + '×';
+    return all.map(c => c.v + '×').join(' · ').slice(0, 60);
+  }
+
   function extractScore(id, text) {
     const t = String(text).replace(/ /g, ' ');
     let m;
@@ -309,12 +352,26 @@ td.num { font: 400 13px/1.5 var(--font-data); }
         return i < 0 ? 'Missed' : 'Guess ' + (i + 1);
       }
     }
-    if (id === 'fermi' && (m = t.match(/(\d+(?:\.\d+)?)\s*[×x](?![a-z])/i))) return m[1] + '×';
-    if (id === 'globle' && (m = t.match(/=\s*(\d+)/))) return m[1] + (m[1] === '1' ? ' guess' : ' guesses');
+    if (id === 'fermi') return fermiScore(t);
+    if (id === 'globle') {
+      if ((m = t.match(/=\s*(\d+)/))) return guesses(m[1]);
+      const sq = chars(t).filter(c => '🟥🟧🟨🟩'.includes(c)).length;
+      if (sq) return guesses(String(sq));
+    }
 
-    if ((m = t.match(/(?<![\d\/])(\d[\d,.]*|X)\s*\/\s*(\d[\d,.]*)(?![\d\/])/))) return trimNum(m[1]) + '/' + trimNum(m[2]);
-    if ((m = t.match(/\bin\s+(\d+)\s+(guess|tr(?:y|ies)|attempt)/i))) return m[1] + (m[1] === '1' ? ' guess' : ' guesses');
-    if ((m = t.match(/score\s*:?\s*(\d[\d,.]*\s?[×%]?)/i))) return trimNum(m[1].trim());
+    /* 1. a fraction out of this game's known total, e.g. 4/6 for Wordle or 432/500 for ANNO */
+    const fr = fractions(t);
+    if (TOTALS[id]) { const hit = fr.find(f => f.den === TOTALS[id]); if (hit) return hit.text; }
+    /* 2. a number the game itself labels as the total */
+    const lab = labelled(t);
+    if (lab) return lab;
+    /* 3. several fractions: the total is the one out of the biggest number; if they tie, keep them all */
+    if (fr.length) {
+      const top = Math.max(...fr.map(f => f.den));
+      const best = fr.filter(f => f.den === top);
+      return best.length === 1 ? best[0].text : best.map(f => f.text).join(' · ').slice(0, 60);
+    }
+    if ((m = t.match(/\bin\s+(\d+)\s+(guess|tr(?:y|ies)|attempt)/i))) return guesses(m[1]);
     if ((m = t.match(/(\d[\d,.]*)\s*(points|pts)\b/i))) return trimNum(m[1]) + ' pts';
     if ((m = t.match(/=\s*(\d+)/))) return m[1];
     return '';
@@ -339,7 +396,8 @@ td.num { font: 400 13px/1.5 var(--font-data); }
   window.DailyRounds = { parseResult, extractScore, GAMES };
 
   /* ---------- state ---------- */
-  const blank = () => ({ v: 1, days: {}, custom: [], removed: [], prefs: { hidePlayed: false } });
+  const PARSER = 2; /* bump when the score-reading rules change, so saved share texts are read again */
+  const blank = () => ({ v: 1, pv: PARSER, days: {}, custom: [], removed: [], prefs: { hidePlayed: false } });
   let storageOK = true;
   let state = blank();
 
@@ -353,7 +411,7 @@ td.num { font: 400 13px/1.5 var(--font-data); }
         const e = raw.days[day][id];
         if (!e || typeof e !== 'object') continue;
         const item = { s: typeof e.s === 'string' ? e.s.slice(0, 60) : '', t: Number(e.t) || 0 };
-        if (typeof e.r === 'string' && e.r) item.r = e.r.slice(0, 500);
+        if (typeof e.r === 'string' && e.r) item.r = e.r.slice(0, 1000);
         d[String(id).slice(0, 60)] = item;
       }
       if (Object.keys(d).length) out.days[day] = d;
@@ -366,7 +424,27 @@ td.num { font: 400 13px/1.5 var(--font-data); }
     }
     if (Array.isArray(raw.removed)) out.removed = raw.removed.filter(x => typeof x === 'string').slice(0, 200);
     if (raw.prefs && typeof raw.prefs === 'object') out.prefs.hidePlayed = !!raw.prefs.hidePlayed;
+    out.pv = Number(raw.pv) || 1;
     return out;
+  }
+
+  /* Re-read saved share texts when the reading rules have changed, and drop texts older than 30 days to save space. */
+  function refresh() {
+    const cutoff = Date.now() - 30 * 86400000;
+    let changed = false;
+    for (const day of Object.keys(state.days)) {
+      for (const id of Object.keys(state.days[day])) {
+        const e = state.days[day][id];
+        if (!e.r) continue;
+        if (state.pv !== PARSER) {
+          const s = extractScore(id, e.r);
+          if (s && s !== e.s) { e.s = s.slice(0, 60); changed = true; }
+        }
+        if (keyDate(day).getTime() < cutoff) { delete e.r; changed = true; }
+      }
+    }
+    if (state.pv !== PARSER) { state.pv = PARSER; changed = true; }
+    if (changed) save();
   }
 
   function safeUrl(u) {
@@ -419,7 +497,7 @@ td.num { font: 400 13px/1.5 var(--font-data); }
     const k = day || today;
     const d = state.days[k] || (state.days[k] = {});
     const e = { s: (score || '').slice(0, 60), t: at || Date.now() };
-    if (raw) e.r = String(raw).slice(0, 500);
+    if (raw) e.r = String(raw).slice(0, 1000);
     d[id] = e;
     save();
   }
@@ -471,7 +549,7 @@ td.num { font: 400 13px/1.5 var(--font-data); }
   }
 
   /* ---------- render: today ---------- */
-  let editing = null, justFlipped = null, pendingRaw = '', lastOpened = null;
+  let editing = null, justFlipped = null, pendingRaw = '', pendingScore = '', lastOpened = null;
 
   function renderToday() {
     const done = dayEntries(today), games = activeGames();
@@ -523,20 +601,22 @@ td.num { font: 400 13px/1.5 var(--font-data); }
       if (!txt) return;
       e.preventDefault();
       pendingRaw = txt;
-      input.value = extractScore(g.id, txt) || txt.replace(/\s+/g, ' ').trim().slice(0, 60);
+      pendingScore = input.value = extractScore(g.id, txt) || txt.replace(/\s+/g, ' ').trim().slice(0, 60);
     });
     input.addEventListener('keydown', e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') closeEditor(); });
     const commit = () => {
       const v = input.value.trim();
-      setEntry(g.id, v, pendingRaw);
-      editing = null; pendingRaw = ''; justFlipped = entry ? null : g.id;
+      /* a score typed or corrected by hand is kept as it is and never re-read from the share text */
+      setEntry(g.id, v, pendingRaw && v === pendingScore ? pendingRaw : '');
+      editing = null; pendingRaw = ''; pendingScore = ''; justFlipped = entry ? null : g.id;
       renderAll();
       toast(g.name + (v ? ': ' + v + ' saved' : ' ticked off'));
     };
     return h('div', { class: 'editor' },
       input,
       h('button', { class: 'btn btn-primary', type: 'button', onclick: commit }, 'Save'),
-      h('button', { class: 'btn', type: 'button', onclick: closeEditor }, 'Cancel')
+      h('button', { class: 'btn', type: 'button', onclick: closeEditor }, 'Cancel'),
+      entry && entry.r ? h('details', { class: 'caught' }, h('summary', null, 'Text this score was read from'), h('pre', null, entry.r)) : null
     );
   }
   function openEditor(id) { editing = id; pendingRaw = ''; wantFocus = true; renderToday(); }
@@ -688,6 +768,7 @@ td.num { font: 400 13px/1.5 var(--font-data); }
       }
     }
     for (const c of parsed.custom) if (!allGames().some(g => g.id === c.id)) state.custom.push(c);
+    state.pv = 1; refresh();
     save(); renderAll();
     toast('Restored ' + plural(added, 'result'));
   }
@@ -828,6 +909,7 @@ td.num { font: 400 13px/1.5 var(--font-data); }
   setInterval(tick, 60000);
 
   load();
+  refresh();
   const start = (location.hash || '').replace('#', '');
   if (start === 'history' || start === 'data') showTab(start);
   renderAll();
