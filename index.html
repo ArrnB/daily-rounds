@@ -1,0 +1,837 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Daily Rounds</title>
+<meta name="daily-rounds" content="1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one left-aligned column; the share-grid tile is the only loud element, everything else stays quiet. */
+:root {
+  --paper: #f1f4f0;
+  --surface: #ffffff;
+  --ink: #16211c;
+  --muted: #5a6860;
+  --line: #d5dcd6;
+  --accent: #2b4bd8;
+  --accent-ink: #ffffff;
+  --done: #2a9259;
+  --done-ink: #ffffff;
+  --done-soft: #dcefe3;
+  --todo: #e1e6e1;
+  --warn: #a8480f;
+  --font-display: "Bricolage Grotesque", "Trebuchet MS", "Segoe UI", sans-serif;
+  --font-body: "Instrument Sans", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #111714; --surface: #1a221e; --ink: #e8eee9; --muted: #98a59d; --line: #2d3832;
+    --accent: #93a6ff; --accent-ink: #0c1230; --done: #45b97a; --done-ink: #06210f;
+    --done-soft: #1d3628; --todo: #28322c; --warn: #f0a068; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #111714; --surface: #1a221e; --ink: #e8eee9; --muted: #98a59d; --line: #2d3832;
+  --accent: #93a6ff; --accent-ink: #0c1230; --done: #45b97a; --done-ink: #06210f;
+  --done-soft: #1d3628; --todo: #28322c; --warn: #f0a068; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font: 400 15px/1.5 var(--font-body); }
+.wrap { max-width: 780px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 96px; display: flex; flex-direction: column; gap: 24px; }
+h1, h2, h3, p { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Masthead */
+.masthead { display: flex; flex-direction: column; gap: 14px; }
+.mast-top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; }
+.mast-top h1 { font: 700 34px/1.05 var(--font-display); letter-spacing: -0.02em; }
+.mast-date { font: 400 13px/1.4 var(--font-data); color: var(--muted); }
+.progress { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
+.progress-count { font: 700 44px/1 var(--font-display); font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
+.progress-label { color: var(--muted); }
+.streak { margin-left: auto; font: 500 13px/1 var(--font-data); padding: 6px 10px; border-radius: 999px; background: var(--done-soft); color: var(--ink); }
+.strip { display: flex; gap: 4px; }
+.strip i { flex: 1 1 0; min-width: 0; max-width: 24px; aspect-ratio: 1; border-radius: 3px; background: var(--todo); }
+.strip i.on { background: var(--done); }
+
+/* Tabs */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
+.tab { background: none; border: 0; border-bottom: 2px solid transparent; padding: 10px 14px; margin-bottom: -1px; cursor: pointer; font-weight: 500; color: var(--muted); }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
+.panel { display: flex; flex-direction: column; gap: 24px; }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 7px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-weight: 500; font-size: 14px; line-height: 1.3; text-decoration: none; color: var(--ink); white-space: nowrap; }
+.btn:hover { border-color: var(--muted); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn-primary:hover { border-color: var(--accent); filter: brightness(1.08); }
+.btn-quiet { background: transparent; border-style: dashed; color: var(--muted); }
+.btn-danger { color: var(--warn); }
+.btn-score { font: 500 13px/1.3 var(--font-data); background: var(--done-soft); border-color: transparent; white-space: normal; text-align: left; }
+
+/* Paste box */
+.paste { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.paste label { font-weight: 600; }
+.paste-row { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; }
+.paste-row textarea { flex: 1 1 220px; min-width: 0; }
+.hint { color: var(--muted); font-size: 13px; max-width: 65ch; }
+.msg { color: var(--warn); font-size: 13px; }
+textarea, input[type="text"], input[type="url"], select { background: var(--paper); border: 1px solid var(--line); border-radius: 7px; padding: 7px 10px; min-width: 0; }
+textarea { resize: vertical; font: 400 13px/1.45 var(--font-data); }
+
+.toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.check { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); cursor: pointer; }
+
+/* Game list */
+.group { display: flex; flex-direction: column; }
+.group-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-bottom: 6px; }
+.group-head h2 { font: 600 12px/1.4 var(--font-body); letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
+.group-head span { font: 400 12px/1.4 var(--font-data); color: var(--muted); font-variant-numeric: tabular-nums; }
+.game { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+.game.is-done .game-name { color: var(--muted); }
+.tile { width: 36px; height: 36px; border-radius: 6px; border: 1px solid var(--line); background: var(--todo); color: transparent; cursor: pointer; display: grid; place-items: center; font: 700 18px/1 var(--font-display); padding: 0; }
+.tile[aria-checked="true"] { background: var(--done); border-color: var(--done); color: var(--done-ink); }
+.tile.flip { animation: flip 0.45s ease; }
+@keyframes flip { 0% { transform: rotateX(0); } 50% { transform: rotateX(90deg); } 100% { transform: rotateX(0); } }
+.game-text { min-width: 0; }
+.game-name { font-weight: 600; }
+.game-desc { color: var(--muted); font-size: 13px; }
+.game-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.editor { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+.editor input { flex: 1 1 180px; font-family: var(--font-data); font-size: 13px; }
+.editor .hint { flex-basis: 100%; }
+@media (max-width: 560px) {
+  .game { grid-template-columns: auto minmax(0, 1fr); }
+  .game-actions { grid-column: 2; justify-content: flex-start; }
+  .mast-top h1 { font-size: 28px; }
+}
+
+/* History */
+.stats { display: flex; flex-wrap: wrap; gap: 6px 22px; font: 400 13px/1.5 var(--font-data); color: var(--muted); }
+.stats b { color: var(--ink); font-weight: 500; }
+.field { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.day { border-top: 1px solid var(--line); }
+.day summary { display: grid; grid-template-columns: minmax(0, 9.5em) auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 10px 0; cursor: pointer; list-style: none; }
+.day summary::-webkit-details-marker { display: none; }
+.day-date { font-weight: 600; }
+.day-count { font: 400 13px/1 var(--font-data); color: var(--muted); font-variant-numeric: tabular-nums; }
+.day .strip i { max-width: 14px; }
+.day-list { margin: 0; padding: 0 0 12px; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; }
+.day-list li { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; min-width: 0; }
+.day-list span:last-child { font: 400 13px/1.6 var(--font-data); color: var(--muted); text-align: right; overflow-wrap: anywhere; }
+.table-scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; }
+th, td { text-align: left; padding: 8px 12px 8px 0; border-top: 1px solid var(--line); }
+th { font: 600 12px/1.4 var(--font-body); letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); border-top: 0; }
+td.num { font: 400 13px/1.5 var(--font-data); }
+.empty { color: var(--muted); max-width: 60ch; padding: 20px 0; }
+
+/* Data */
+.block { display: flex; flex-direction: column; gap: 10px; padding-top: 18px; border-top: 1px solid var(--line); }
+.block:first-child { border-top: 0; padding-top: 0; }
+.block h2 { font: 700 18px/1.3 var(--font-display); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.row input[type="text"], .row input[type="url"] { flex: 1 1 180px; }
+.mine { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px 16px; }
+.mine li { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.mine span { overflow-wrap: anywhere; }
+.mine .btn { padding: 3px 8px; font-size: 12px; }
+.banner { background: var(--surface); border: 1px solid var(--warn); border-radius: 8px; padding: 10px 12px; color: var(--ink); }
+
+.toast { position: fixed; left: 50%; bottom: 0; transform: translateX(-50%); margin-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--paper); padding: 10px 14px; border-radius: 9px; display: flex; gap: 12px; align-items: center; max-width: calc(100% - 32px); font-size: 14px; z-index: 5; }
+.toast button { background: none; border: 0; color: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; padding: 0; }
+@media (prefers-reduced-motion: reduce) { .tile.flip { animation: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <div class="mast-top">
+      <h1>Daily Rounds</h1>
+      <span class="mast-date" id="mast-date"></span>
+    </div>
+    <div class="progress">
+      <span class="progress-count" id="progress-count">0</span>
+      <span class="progress-label" id="progress-label"></span>
+      <span class="streak" id="streak" hidden></span>
+    </div>
+    <div class="strip" id="strip" aria-hidden="true"></div>
+  </header>
+
+  <div class="banner" id="storage-banner" hidden>This browser is blocking storage for this page, so results will be lost when you close it. Turn off private browsing or allow site data, then reload.</div>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab" role="tab" id="tab-today" data-tab="today" aria-selected="true" aria-controls="today">Today</button>
+    <button class="tab" role="tab" id="tab-history" data-tab="history" aria-selected="false" aria-controls="history">History</button>
+    <button class="tab" role="tab" id="tab-data" data-tab="data" aria-selected="false" aria-controls="data">Games &amp; backup</button>
+  </nav>
+
+  <section class="panel" id="today" role="tabpanel" aria-labelledby="tab-today">
+    <div class="paste">
+      <label for="paste-box">Paste a result</label>
+      <div class="paste-row">
+        <textarea id="paste-box" rows="2" placeholder="Wordle 1,574 4/6"></textarea>
+        <button class="btn" id="paste-save" type="button">Save result</button>
+      </div>
+      <p class="hint" id="paste-hint">After a game, tap its Share button, then paste here. The result is filed under the right game and the game is ticked off.</p>
+      <p class="msg" id="paste-msg" hidden></p>
+    </div>
+    <div class="toolbar">
+      <label class="check" for="hide-played"><input type="checkbox" id="hide-played"> Hide games I've played</label>
+    </div>
+    <div class="panel" id="groups"></div>
+  </section>
+
+  <section class="panel" id="history" role="tabpanel" aria-labelledby="tab-history" hidden>
+    <div class="stats" id="stats"></div>
+    <div class="field">
+      <label for="history-game">Show</label>
+      <select id="history-game"></select>
+    </div>
+    <div id="history-body"></div>
+  </section>
+
+  <section class="panel" id="data" role="tabpanel" aria-labelledby="tab-data" hidden>
+    <div class="block">
+      <h2>Share catcher</h2>
+      <p class="hint" id="catcher-status"></p>
+    </div>
+
+    <div class="block">
+      <h2>Backup</h2>
+      <p class="hint" id="storage-note"></p>
+      <div class="row">
+        <button class="btn" id="backup-download" type="button" hidden>Download backup file</button>
+        <button class="btn" id="backup-copy" type="button">Copy backup text</button>
+      </div>
+      <textarea id="backup-text" rows="4" aria-label="Backup text" placeholder="Paste backup text here to restore it"></textarea>
+      <div class="row">
+        <button class="btn" id="restore-text" type="button">Restore from text above</button>
+        <label class="btn" for="restore-file">Restore from a file<input type="file" id="restore-file" accept=".json,application/json,text/plain" hidden></label>
+      </div>
+      <p class="hint">Restoring merges with what is already here. Where both have a result for the same game and day, the newer one is kept.</p>
+    </div>
+
+    <div class="block">
+      <h2>Your games</h2>
+      <ul class="mine" id="mine"></ul>
+      <form class="row" id="add-form" novalidate>
+        <input type="text" id="add-name" placeholder="Game name" aria-label="Game name" maxlength="40">
+        <input type="url" id="add-url" placeholder="https://…" aria-label="Game link" maxlength="300">
+        <button class="btn" type="submit">Add game</button>
+      </form>
+      <p class="msg" id="add-msg" hidden></p>
+      <div class="row"><button class="btn btn-quiet" id="restore-removed" type="button" hidden></button></div>
+    </div>
+
+    <div class="block">
+      <h2>Erase</h2>
+      <div class="row" id="erase-row">
+        <button class="btn btn-danger" id="erase" type="button">Erase all results</button>
+      </div>
+      <div class="row" id="erase-confirm" hidden>
+        <span>Erase every saved result in this browser?</span>
+        <button class="btn btn-danger" id="erase-yes" type="button">Yes, erase</button>
+        <button class="btn" id="erase-no" type="button">Keep them</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden><span id="toast-text"></span><button id="toast-undo" type="button" hidden>Undo</button></div>
+
+<script>
+(() => {
+  'use strict';
+  const KEY = 'daily-rounds-v1';
+
+  const GROUPS = [
+    ['maps', 'Maps'],
+    ['time', 'Time and numbers'],
+    ['words', 'Words'],
+    ['trivia', 'Trivia'],
+    ['games', 'Video games'],
+    ['yours', 'Your additions']
+  ];
+
+  const GAMES = [
+    { id: 'geoguessr', group: 'maps', name: 'GeoGuessr', url: 'https://www.geoguessr.com/', desc: 'Dropped into a street view. Pin where you are.', match: /geo\s?guessr/i },
+    { id: 'globle', group: 'maps', name: 'Globle', url: 'https://globle-game.com/game', desc: 'Find the mystery country by how close each guess is.', match: /globle/i },
+    { id: 'maptap', group: 'maps', name: 'MapTap', url: 'https://maptap.gg/', desc: 'Tap the place on a world map. Scored by distance.', match: /map\s?tap/i },
+    { id: 'tradle', group: 'maps', name: 'Tradle', url: 'https://games.oec.world/en/tradle', desc: 'Name the country from what it exports.', match: /tradle/i },
+    { id: 'timeguessr', group: 'time', name: 'TimeGuessr', url: 'https://timeguessr.com/play?mode=daily', desc: 'Where and when was this photo taken?', match: /time\s?guessr/i },
+    { id: 'anno', group: 'time', name: 'ANNO', url: 'https://anno-game.netlify.app/', desc: 'Place five historical events on a timeline.', match: /\banno\b/i },
+    { id: 'fermi', group: 'time', name: 'Fermi', url: 'https://fermi.gg/', desc: 'Three estimation questions, one guess each.', match: /\bfermi\b/i },
+    { id: 'angle', group: 'time', name: 'Angle', url: 'https://angle.wtf/', desc: 'Guess the angle by eye in four tries.', match: /#angle\b|\bangle\s*#?\d|angle\.wtf/i },
+    { id: 'wordle', group: 'words', name: 'Wordle', url: 'https://www.nytimes.com/games/wordle/index.html', desc: 'Five letters, six tries.', match: /\bwordle\b/i },
+    { id: 'connections', group: 'words', name: 'Connections', url: 'https://www.nytimes.com/games/connections', desc: 'Sort 16 words into four hidden groups.', match: /\bconnections\b/i },
+    { id: 'chainle', group: 'words', name: 'Chainle', url: 'https://chainle.io/', desc: 'Find the word that links the clues.', match: /chainle/i },
+    { id: 'redactle', group: 'words', name: 'Redactle', url: 'https://redactle.net/', desc: 'Uncover a blacked-out Wikipedia article.', match: /redactle/i },
+    { id: 'krillion', group: 'trivia', name: 'Krillion', url: 'https://krillion.io/', desc: 'Seven prompts. Rarer answers go deeper.', match: /krillion/i },
+    { id: 'googlefeud', group: 'trivia', name: 'Google Feud', url: 'https://googlefeud.com/', desc: 'Guess how Google finishes the search.', match: /google\s?feud|feudle/i },
+    { id: 'metazooa', group: 'trivia', name: 'Metazooa', url: 'https://metazooa.com/', desc: 'Find the animal through its family tree.', match: /metazooa|animal\s*#\d+/i },
+    { id: 'pokedoku', group: 'games', name: 'Pokedoku', url: 'https://pokedoku.com/', desc: 'Fill a 3x3 grid with Pokémon that fit both labels.', match: /pok[eé]doku/i },
+    { id: 'gamedle', group: 'games', name: 'Gamedle', url: 'https://www.gamedle.wtf/', desc: 'Name the video game from its cover art.', match: /gamedle/i },
+    { id: 'guessthegame', group: 'games', name: 'GuessTheGame', url: 'https://guessthe.game/', desc: 'Name the game from six screenshots.', match: /guess\s?the\.?\s?game/i }
+  ];
+
+  /* ---------- result parsing (pure) ---------- */
+  const chars = s => Array.from(s);
+  const trimNum = s => s.replace(/[.,]+$/, '');
+
+  function extractScore(id, text) {
+    const t = String(text).replace(/ /g, ' ');
+    let m;
+    if (id === 'connections') {
+      const rows = t.split(/\n/).map(l => chars(l).filter(c => '🟨🟩🟦🟪'.includes(c))).filter(r => r.length === 4);
+      if (rows.length) {
+        const solved = rows.filter(r => r.every(c => c === r[0])).length;
+        const miss = rows.length - solved;
+        if (solved === 4) return miss ? 'Solved, ' + miss + (miss > 1 ? ' mistakes' : ' mistake') : 'Perfect';
+        return solved + '/4 groups';
+      }
+    }
+    if (id === 'guessthegame' || id === 'gamedle') {
+      const cells = chars(t).filter(c => '🟥🟩🟨⬛⬜'.includes(c));
+      if (cells.length) {
+        const i = cells.indexOf('🟩');
+        if (id === 'guessthegame') return (i < 0 ? 'X' : i + 1) + '/6';
+        return i < 0 ? 'Missed' : 'Guess ' + (i + 1);
+      }
+    }
+    if (id === 'fermi' && (m = t.match(/(\d+(?:\.\d+)?)\s*[×x](?![a-z])/i))) return m[1] + '×';
+    if (id === 'globle' && (m = t.match(/=\s*(\d+)/))) return m[1] + (m[1] === '1' ? ' guess' : ' guesses');
+
+    if ((m = t.match(/(?<![\d\/])(\d[\d,.]*|X)\s*\/\s*(\d[\d,.]*)(?![\d\/])/))) return trimNum(m[1]) + '/' + trimNum(m[2]);
+    if ((m = t.match(/\bin\s+(\d+)\s+(guess|tr(?:y|ies)|attempt)/i))) return m[1] + (m[1] === '1' ? ' guess' : ' guesses');
+    if ((m = t.match(/score\s*:?\s*(\d[\d,.]*\s?[×%]?)/i))) return trimNum(m[1].trim());
+    if ((m = t.match(/(\d[\d,.]*)\s*(points|pts)\b/i))) return trimNum(m[1]) + ' pts';
+    if ((m = t.match(/=\s*(\d+)/))) return m[1];
+    return '';
+  }
+
+  function detectGame(text, games) {
+    let best = null, bestAt = Infinity;
+    for (const g of games) {
+      const re = g.match || new RegExp(g.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      const m = re.exec(text);
+      if (m && m.index < bestAt) { best = g; bestAt = m.index; }
+    }
+    if (!best && text.includes('🌎') && text.includes('🌍')) best = games.find(g => g.id === 'globle') || null;
+    return best;
+  }
+
+  function parseResult(text, games) {
+    const g = detectGame(text, games);
+    return g ? { id: g.id, name: g.name, score: extractScore(g.id, text) } : null;
+  }
+
+  window.DailyRounds = { parseResult, extractScore, GAMES };
+
+  /* ---------- state ---------- */
+  const blank = () => ({ v: 1, days: {}, custom: [], removed: [], prefs: { hidePlayed: false } });
+  let storageOK = true;
+  let state = blank();
+
+  function clean(raw) {
+    const out = blank();
+    if (!raw || typeof raw !== 'object' || typeof raw.days !== 'object' || !raw.days) return null;
+    for (const day of Object.keys(raw.days)) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || typeof raw.days[day] !== 'object' || !raw.days[day]) continue;
+      const d = {};
+      for (const id of Object.keys(raw.days[day])) {
+        const e = raw.days[day][id];
+        if (!e || typeof e !== 'object') continue;
+        const item = { s: typeof e.s === 'string' ? e.s.slice(0, 60) : '', t: Number(e.t) || 0 };
+        if (typeof e.r === 'string' && e.r) item.r = e.r.slice(0, 500);
+        d[String(id).slice(0, 60)] = item;
+      }
+      if (Object.keys(d).length) out.days[day] = d;
+    }
+    if (Array.isArray(raw.custom)) {
+      for (const c of raw.custom) {
+        if (!c || typeof c.id !== 'string' || typeof c.name !== 'string' || !safeUrl(c.url)) continue;
+        out.custom.push({ id: c.id.slice(0, 60), name: c.name.slice(0, 40), url: safeUrl(c.url), group: 'yours', desc: '' });
+      }
+    }
+    if (Array.isArray(raw.removed)) out.removed = raw.removed.filter(x => typeof x === 'string').slice(0, 200);
+    if (raw.prefs && typeof raw.prefs === 'object') out.prefs.hidePlayed = !!raw.prefs.hidePlayed;
+    return out;
+  }
+
+  function safeUrl(u) {
+    try { const x = new URL(String(u)); return (x.protocol === 'https:' || x.protocol === 'http:') ? x.href : ''; }
+    catch (e) { return ''; }
+  }
+
+  function load() {
+    try {
+      const s = localStorage.getItem(KEY);
+      if (s) { const c = clean(JSON.parse(s)); if (c) state = c; }
+      localStorage.setItem(KEY + '-probe', '1'); localStorage.removeItem(KEY + '-probe');
+    } catch (e) { storageOK = false; }
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); storageOK = true; }
+    catch (e) { storageOK = false; }
+  }
+
+  /* ---------- dates ---------- */
+  const pad = n => String(n).padStart(2, '0');
+  const dayKey = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  const keyDate = k => { const p = k.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2], 12); };
+  const prevKey = k => { const d = keyDate(k); d.setDate(d.getDate() - 1); return dayKey(d); };
+  const fmtLong = new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+  const fmtShort = new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  let today = dayKey(new Date());
+
+  /* ---------- helpers ---------- */
+  const $ = id => document.getElementById(id);
+  function h(tag, props, ...kids) {
+    const e = document.createElement(tag);
+    if (props) for (const k of Object.keys(props)) {
+      const v = props[k];
+      if (v == null || v === false) continue;
+      if (k === 'class') e.className = v;
+      else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+      else e.setAttribute(k, v === true ? '' : v);
+    }
+    for (const c of kids.flat()) { if (c == null || c === false) continue; e.append(c.nodeType ? c : document.createTextNode(c)); }
+    return e;
+  }
+  const allGames = () => GAMES.concat(state.custom);
+  const activeGames = () => allGames().filter(g => !state.removed.includes(g.id));
+  const gameName = id => { const g = allGames().find(x => x.id === id); return g ? g.name : id; };
+  const dayEntries = k => state.days[k] || {};
+  const plural = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
+
+  function setEntry(id, score, raw, day, at) {
+    const k = day || today;
+    const d = state.days[k] || (state.days[k] = {});
+    const e = { s: (score || '').slice(0, 60), t: at || Date.now() };
+    if (raw) e.r = String(raw).slice(0, 500);
+    d[id] = e;
+    save();
+  }
+  function removeEntry(id) {
+    const d = state.days[today];
+    if (!d || !d[id]) return null;
+    const old = d[id];
+    delete d[id];
+    if (!Object.keys(d).length) delete state.days[today];
+    save();
+    return old;
+  }
+
+  function streaks() {
+    const keys = Object.keys(state.days).filter(k => Object.keys(state.days[k]).length).sort();
+    let best = 0, run = 0, prev = null;
+    for (const k of keys) { run = (prev && prevKey(k) === prev) ? run + 1 : 1; if (run > best) best = run; prev = k; }
+    let cur = 0, k = state.days[today] ? today : prevKey(today);
+    while (state.days[k] && Object.keys(state.days[k]).length) { cur++; k = prevKey(k); }
+    const results = keys.reduce((n, d) => n + Object.keys(state.days[d]).length, 0);
+    return { cur, best, days: keys.length, results };
+  }
+
+  /* ---------- toast ---------- */
+  let toastTimer = 0, undoFn = null;
+  function toast(text, undo) {
+    $('toast-text').textContent = text;
+    undoFn = undo || null;
+    $('toast-undo').hidden = !undo;
+    $('toast').hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { $('toast').hidden = true; undoFn = null; }, undo ? 6000 : 3200);
+  }
+  $('toast-undo').addEventListener('click', () => { if (undoFn) undoFn(); $('toast').hidden = true; undoFn = null; });
+
+  /* ---------- render: masthead ---------- */
+  function renderMast() {
+    const games = activeGames(), done = dayEntries(today);
+    const n = games.filter(g => done[g.id]).length;
+    $('mast-date').textContent = fmtLong.format(keyDate(today));
+    $('progress-count').textContent = n;
+    $('progress-label').textContent = n === games.length && n ? 'of ' + games.length + ' played. All done for today.' : 'of ' + games.length + ' played today';
+    const strip = $('strip');
+    strip.replaceChildren(...games.map(g => h('i', { class: done[g.id] ? 'on' : '', title: g.name })));
+    const s = streaks();
+    $('streak').hidden = s.cur < 1;
+    $('streak').textContent = s.cur + '-day streak';
+    $('storage-banner').hidden = storageOK;
+  }
+
+  /* ---------- render: today ---------- */
+  let editing = null, justFlipped = null, pendingRaw = '', lastOpened = null;
+
+  function renderToday() {
+    const done = dayEntries(today), games = activeGames();
+    $('hide-played').checked = state.prefs.hidePlayed;
+    const out = [];
+    for (const [gid, label] of GROUPS) {
+      const inGroup = games.filter(g => (g.group || 'yours') === gid);
+      if (!inGroup.length) continue;
+      const played = inGroup.filter(g => done[g.id]).length;
+      const shown = state.prefs.hidePlayed ? inGroup.filter(g => !done[g.id] || editing === g.id) : inGroup;
+      out.push(h('div', { class: 'group' },
+        h('div', { class: 'group-head' }, h('h2', null, label), h('span', null, played + '/' + inGroup.length)),
+        shown.map(g => gameRow(g, done[g.id]))
+      ));
+    }
+    if (state.prefs.hidePlayed && games.length && games.every(g => done[g.id])) {
+      out.push(h('p', { class: 'empty' }, 'Every game is played. Come back tomorrow, or untick "Hide games I\'ve played" to see today\'s results.'));
+    }
+    $('groups').replaceChildren(...out);
+    if (editing) { const inp = $('score-' + editing); if (inp && document.activeElement !== inp && wantFocus) { inp.focus(); wantFocus = false; } }
+    justFlipped = null;
+  }
+  let wantFocus = false;
+
+  function gameRow(g, entry) {
+    const isDone = !!entry;
+    const tile = h('button', {
+      class: 'tile' + (justFlipped === g.id ? ' flip' : ''), type: 'button', role: 'checkbox', id: 'tile-' + g.id,
+      'aria-checked': String(isDone), 'aria-label': g.name + (isDone ? ', played' : ', not played'),
+      onclick: () => toggle(g)
+    }, '✓');
+    const scoreBtn = entry && entry.s
+      ? h('button', { class: 'btn btn-score', type: 'button', title: 'Change score', onclick: () => openEditor(g.id) }, entry.s)
+      : h('button', { class: 'btn btn-quiet', type: 'button', onclick: () => openEditor(g.id) }, 'Add score');
+    const play = h('a', { class: 'btn btn-primary', href: g.url, target: '_blank', rel: 'noopener noreferrer', onclick: () => { lastOpened = g.id; } }, 'Play ', h('span', { 'aria-hidden': 'true' }, '↗'));
+    const row = h('div', { class: 'game' + (isDone ? ' is-done' : ''), id: 'game-' + g.id },
+      tile,
+      h('div', { class: 'game-text' }, h('div', { class: 'game-name' }, g.name), g.desc ? h('div', { class: 'game-desc' }, g.desc) : null),
+      h('div', { class: 'game-actions' }, scoreBtn, play)
+    );
+    if (editing === g.id) row.append(editorFor(g, entry));
+    return row;
+  }
+
+  function editorFor(g, entry) {
+    const input = h('input', { type: 'text', id: 'score-' + g.id, maxlength: '60', placeholder: 'Type a score or paste the shared result', 'aria-label': 'Score for ' + g.name, value: entry && entry.s ? entry.s : '' });
+    input.addEventListener('paste', e => {
+      const txt = (e.clipboardData && e.clipboardData.getData('text')) || '';
+      if (!txt) return;
+      e.preventDefault();
+      pendingRaw = txt;
+      input.value = extractScore(g.id, txt) || txt.replace(/\s+/g, ' ').trim().slice(0, 60);
+    });
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') closeEditor(); });
+    const commit = () => {
+      const v = input.value.trim();
+      setEntry(g.id, v, pendingRaw);
+      editing = null; pendingRaw = ''; justFlipped = entry ? null : g.id;
+      renderAll();
+      toast(g.name + (v ? ': ' + v + ' saved' : ' ticked off'));
+    };
+    return h('div', { class: 'editor' },
+      input,
+      h('button', { class: 'btn btn-primary', type: 'button', onclick: commit }, 'Save'),
+      h('button', { class: 'btn', type: 'button', onclick: closeEditor }, 'Cancel')
+    );
+  }
+  function openEditor(id) { editing = id; pendingRaw = ''; wantFocus = true; renderToday(); }
+  function closeEditor() { editing = null; pendingRaw = ''; renderToday(); }
+
+  function toggle(g) {
+    if (dayEntries(today)[g.id]) {
+      const old = removeEntry(g.id);
+      if (editing === g.id) editing = null;
+      renderAll();
+      toast(g.name + ' unticked', () => { const d = state.days[today] || (state.days[today] = {}); d[g.id] = old; save(); renderAll(); });
+    } else {
+      setEntry(g.id, '');
+      justFlipped = g.id;
+      renderAll();
+    }
+  }
+
+  /* ---------- paste box ---------- */
+  function fileResult(text) {
+    const msg = $('paste-msg');
+    const t = String(text || '').trim();
+    msg.hidden = true;
+    if (!t) return false;
+    const r = parseResult(t, activeGames());
+    if (!r) {
+      msg.textContent = 'Could not tell which game this is from. Use "Add score" on that game\'s row instead.';
+      msg.hidden = false;
+      return false;
+    }
+    const was = dayEntries(today)[r.id];
+    setEntry(r.id, r.score, t);
+    justFlipped = was ? null : r.id;
+    renderAll();
+    toast(r.name + (r.score ? ': ' + r.score + ' saved' : ' ticked off. Add the score on its row if you want one.'));
+    return true;
+  }
+  $('paste-box').addEventListener('paste', e => {
+    const txt = (e.clipboardData && e.clipboardData.getData('text')) || '';
+    if (!txt) return;
+    e.preventDefault();
+    if (fileResult(txt)) $('paste-box').value = ''; else $('paste-box').value = txt;
+  });
+  $('paste-save').addEventListener('click', () => { if (fileResult($('paste-box').value)) $('paste-box').value = ''; });
+  document.addEventListener('paste', e => {
+    const el = e.target;
+    if (el && el.closest && el.closest('input, textarea, select')) return;
+    if ($('today').hidden) return;
+    const txt = (e.clipboardData && e.clipboardData.getData('text')) || '';
+    if (txt) fileResult(txt);
+  });
+  $('hide-played').addEventListener('change', e => { state.prefs.hidePlayed = e.target.checked; save(); renderToday(); });
+
+  /* ---------- render: history ---------- */
+  let historyGame = '';
+  function renderHistory() {
+    const s = streaks();
+    $('stats').replaceChildren(
+      h('span', null, h('b', null, String(s.days)), ' ' + (s.days === 1 ? 'day' : 'days') + ' played'),
+      h('span', null, h('b', null, String(s.results)), ' ' + (s.results === 1 ? 'result' : 'results')),
+      h('span', null, 'streak ', h('b', null, String(s.cur))),
+      h('span', null, 'best ', h('b', null, String(s.best)))
+    );
+    const sel = $('history-game');
+    const ids = new Set(activeGames().map(g => g.id));
+    Object.keys(state.days).forEach(k => Object.keys(state.days[k]).forEach(id => ids.add(id)));
+    if (historyGame && !ids.has(historyGame)) historyGame = '';
+    sel.replaceChildren(h('option', { value: '' }, 'All games, day by day'), ...[...ids].map(id => h('option', { value: id }, gameName(id))));
+    sel.value = historyGame;
+
+    const body = $('history-body');
+    const keys = Object.keys(state.days).sort().reverse();
+    if (!keys.length) {
+      body.replaceChildren(h('p', { class: 'empty' }, 'No results yet. Play a game from Today and tick it off. Each day you play shows up here with its scores.'));
+      return;
+    }
+    if (historyGame) {
+      const rows = keys.filter(k => state.days[k][historyGame]).map(k => h('tr', null,
+        h('td', null, fmtShort.format(keyDate(k))), h('td', { class: 'num' }, state.days[k][historyGame].s || 'played')));
+      body.replaceChildren(rows.length
+        ? h('div', { class: 'table-scroll' }, h('table', null, h('thead', null, h('tr', null, h('th', null, 'Day'), h('th', null, 'Score'))), h('tbody', null, rows)))
+        : h('p', { class: 'empty' }, 'No results logged for ' + gameName(historyGame) + ' yet.'));
+      return;
+    }
+    const games = activeGames();
+    const shown = keys.slice(0, 120);
+    const list = shown.map((k, i) => {
+      const d = state.days[k], ids = Object.keys(d);
+      return h('details', { class: 'day', open: i === 0 },
+        h('summary', null,
+          h('span', { class: 'day-date' }, k === today ? 'Today' : fmtShort.format(keyDate(k))),
+          h('span', { class: 'day-count' }, ids.length + '/' + Math.max(games.length, ids.length)),
+          h('span', { class: 'strip', 'aria-hidden': 'true' }, games.map(g => h('i', { class: d[g.id] ? 'on' : '' })))
+        ),
+        h('ul', { class: 'day-list' }, ids.map(id => h('li', null, h('span', null, gameName(id)), h('span', null, d[id].s || 'played'))))
+      );
+    });
+    if (keys.length > shown.length) list.push(h('p', { class: 'hint' }, 'Showing the latest 120 days. Older days are still saved and included in backups.'));
+    body.replaceChildren(...list);
+  }
+  $('history-game').addEventListener('change', e => { historyGame = e.target.value; renderHistory(); });
+
+  /* ---------- render: data ---------- */
+  let downloads = null;
+  const standalone = !window.claude && window.top === window;
+  const fmtBytes = n => n < 1024 ? n + ' bytes' : n < 1048576 ? (n / 1024).toFixed(1) + ' KB' : (n / 1048576).toFixed(2) + ' MB';
+  const backupJson = () => JSON.stringify(state);
+
+  function renderData() {
+    const size = new Blob([backupJson()]).size;
+    $('storage-note').textContent = 'Results are saved in this browser only, on this device. They currently take up ' + fmtBytes(size) + '. Clearing site data or switching browsers loses them, so take a backup now and then.';
+    $('backup-download').hidden = !(downloads || standalone);
+    const games = activeGames();
+    $('mine').replaceChildren(...games.map(g => h('li', null, h('span', null, g.name),
+      h('button', { class: 'btn', type: 'button', 'aria-label': 'Remove ' + g.name, onclick: () => { state.removed.push(g.id); save(); renderAll(); toast(g.name + ' removed. Its past results are kept.', () => { state.removed = state.removed.filter(x => x !== g.id); save(); renderAll(); }); } }, 'Remove'))));
+    const gone = state.removed.filter(id => allGames().some(g => g.id === id)).length;
+    $('restore-removed').hidden = !gone;
+    $('restore-removed').textContent = 'Bring back ' + plural(gone, 'removed game');
+  }
+
+  $('backup-download').addEventListener('click', async () => {
+    if (!downloads && standalone) {
+      const a = h('a', { href: URL.createObjectURL(new Blob([JSON.stringify(state, null, 1)], { type: 'application/json' })), download: 'daily-rounds-backup-' + today + '.json' });
+      document.body.append(a); a.click(); a.remove();
+      toast('Backup file downloaded');
+      return;
+    }
+    if (!downloads) return;
+    try { await downloads.save({ filename: 'daily-rounds-backup-' + today + '.json', data: JSON.stringify(state, null, 1) }); toast('Backup file saved'); }
+    catch (e) { toast(e && e.code === 'declined' ? 'Backup not saved' : 'Could not save a file here. Use "Copy backup text" instead.'); }
+  });
+  $('backup-copy').addEventListener('click', () => {
+    const json = backupJson();
+    const fallback = () => { const ta = $('backup-text'); ta.value = json; ta.focus(); ta.select(); toast('Backup text is in the box. Copy it and keep it somewhere safe.'); };
+    try { navigator.clipboard.writeText(json).then(() => toast('Backup text copied. Paste it into a note or file to keep it.'), fallback); }
+    catch (e) { fallback(); }
+  });
+
+  function restore(text) {
+    let parsed = null;
+    try { parsed = clean(JSON.parse(text)); } catch (e) { parsed = null; }
+    if (!parsed) { toast('That is not a Daily Rounds backup. Nothing was changed.'); return; }
+    let added = 0;
+    for (const day of Object.keys(parsed.days)) {
+      const mine = state.days[day] || (state.days[day] = {});
+      for (const id of Object.keys(parsed.days[day])) {
+        const inc = parsed.days[day][id];
+        if (!mine[id] || (inc.t || 0) > (mine[id].t || 0)) { mine[id] = inc; added++; }
+      }
+    }
+    for (const c of parsed.custom) if (!allGames().some(g => g.id === c.id)) state.custom.push(c);
+    save(); renderAll();
+    toast('Restored ' + plural(added, 'result'));
+  }
+  $('restore-text').addEventListener('click', () => {
+    const v = $('backup-text').value.trim();
+    if (!v) { toast('Paste backup text into the box first.'); return; }
+    restore(v);
+  });
+  $('restore-file').addEventListener('change', e => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const fr = new FileReader();
+    fr.onload = () => restore(String(fr.result || ''));
+    fr.onerror = () => toast('Could not read that file.');
+    fr.readAsText(f);
+    e.target.value = '';
+  });
+
+  $('add-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const name = $('add-name').value.trim(), url = safeUrl($('add-url').value.trim()), msg = $('add-msg');
+    msg.hidden = true;
+    if (!name) { msg.textContent = 'Give the game a name.'; msg.hidden = false; return; }
+    if (!url) { msg.textContent = 'Enter the full link, starting with https://'; msg.hidden = false; return; }
+    const id = 'c-' + name.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 24) + '-' + Date.now().toString(36);
+    state.custom.push({ id, name, url, group: 'yours', desc: '' });
+    save();
+    $('add-name').value = ''; $('add-url').value = '';
+    renderAll();
+    toast(name + ' added');
+  });
+  $('restore-removed').addEventListener('click', () => { state.removed = []; save(); renderAll(); });
+
+  $('erase').addEventListener('click', () => { $('erase-row').hidden = true; $('erase-confirm').hidden = false; });
+  $('erase-no').addEventListener('click', () => { $('erase-row').hidden = false; $('erase-confirm').hidden = true; });
+  $('erase-yes').addEventListener('click', () => {
+    state.days = {}; save();
+    $('erase-row').hidden = false; $('erase-confirm').hidden = true;
+    renderAll(); toast('All results erased');
+  });
+
+  /* ---------- share catcher (userscript bridge) ---------- */
+  let catcher = document.documentElement.getAttribute('data-daily-rounds-catcher') || '';
+  const SELF = location.origin && location.origin !== 'null' ? location.origin : '*';
+  const tell = msg => { try { window.postMessage(Object.assign({ src: 'daily-rounds-page' }, msg), SELF); } catch (e) {} };
+  const bareHost = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return ''; } };
+
+  function gameForCapture(item) {
+    const host = String(item.host || '').replace(/^www\./, '');
+    const games = activeGames();
+    const cands = games.filter(g => host && bareHost(g.url) === host);
+    if (cands.length === 1) return cands[0];
+    if (cands.length > 1) {
+      const path = String(item.path || '');
+      const byPath = cands.find(g => { const p = new URL(g.url).pathname.replace(/index\.html$/, '').replace(/\/$/, ''); return p && path.startsWith(p); });
+      return byPath || detectGame(item.text, cands);
+    }
+    return detectGame(item.text, games);
+  }
+
+  function fileCaught(items) {
+    const ids = [], filed = [];
+    for (const it of items.slice(0, 300)) {
+      if (!it || typeof it.id !== 'string' || typeof it.text !== 'string') continue;
+      ids.push(it.id);
+      const g = gameForCapture(it);
+      if (!g) continue;
+      let at = Number(it.t);
+      if (!at || at > Date.now() + 86400000) at = Date.now();
+      const day = dayKey(new Date(at));
+      const cur = (state.days[day] || {})[g.id];
+      const score = extractScore(g.id, it.text);
+      if (cur && ((cur.t || 0) >= at || (cur.s && !score))) continue;
+      setEntry(g.id, score, it.text, day, at);
+      if (editing === g.id) editing = null;
+      if (day === today) justFlipped = g.id;
+      filed.push(g.name + (score ? ' ' + score : ''));
+    }
+    if (ids.length) tell({ type: 'ack', ids });
+    if (filed.length) {
+      renderAll();
+      toast(filed.length === 1 ? 'Caught ' + filed[0] : 'Caught ' + filed.length + ' results: ' + filed.join(', '));
+    }
+  }
+
+  window.addEventListener('message', e => {
+    if (e.source !== window || !e.data || e.data.src !== 'daily-rounds-catcher') return;
+    catcher = String(e.data.version || '1');
+    if (e.data.type === 'results' && Array.isArray(e.data.items)) fileCaught(e.data.items);
+    renderCatcher();
+  });
+  window.addEventListener('focus', () => tell({ type: 'pull' }));
+
+  function renderCatcher() {
+    $('catcher-status').textContent = catcher
+      ? 'Connected. Tap Share in a game and its result is logged here by itself.'
+      : (window.top !== window
+        ? 'Not connected. The catcher cannot reach this page while it is open inside Claude. Open your own hosted copy of Daily Rounds instead.'
+        : 'Not connected. Install the Daily Rounds share catcher userscript in this browser, then reload this page.');
+    $('paste-hint').textContent = catcher
+      ? 'The share catcher is on, so tapping Share in a game logs the result here by itself. Pasting still works for anything it misses.'
+      : 'After a game, tap its Share button, then paste here. The result is filed under the right game and the game is ticked off.';
+  }
+
+  /* ---------- tabs ---------- */
+  function showTab(name) {
+    for (const b of document.querySelectorAll('.tab')) {
+      const on = b.dataset.tab === name;
+      b.setAttribute('aria-selected', String(on));
+      $(b.dataset.tab).hidden = !on;
+    }
+  }
+  for (const b of document.querySelectorAll('.tab')) b.addEventListener('click', () => showTab(b.dataset.tab));
+
+  function renderAll() { renderMast(); renderToday(); renderHistory(); renderData(); renderCatcher(); }
+
+  /* ---------- lifecycle ---------- */
+  function tick() {
+    const now = dayKey(new Date());
+    if (now !== today) { today = now; editing = null; renderAll(); }
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return;
+    tick();
+    tell({ type: 'pull' });
+    const id = lastOpened;
+    lastOpened = null;
+    if (!id) return;
+    /* give the catcher a moment to deliver before offering the score box */
+    setTimeout(() => {
+      if (dayEntries(today)[id] || $('today').hidden) return;
+      editing = id; pendingRaw = ''; wantFocus = false;
+      renderToday();
+      const row = $('game-' + id);
+      if (row && row.scrollIntoView) row.scrollIntoView({ block: 'nearest' });
+    }, catcher ? 600 : 0);
+  });
+  setInterval(tick, 60000);
+
+  load();
+  const start = (location.hash || '').replace('#', '');
+  if (start === 'history' || start === 'data') showTab(start);
+  renderAll();
+  tell({ type: 'pull' });
+
+  if (window.claude && typeof window.claude.use === 'function') {
+    window.claude.use('downloads').then(d => { downloads = d || null; renderData(); }).catch(() => {});
+  }
+})();
+</script>
+</body>
+</html>
