@@ -296,13 +296,40 @@ td.num { font: 400 13px/1.5 var(--font-data); }
   const TOTALS = { wordle: 6, tradle: 6, guessthegame: 6, angle: 4, timeguessr: 50000, anno: 500, chainle: 5000, pokedoku: 9 };
   const guesses = n => n + (n === '1' ? ' guess' : ' guesses');
 
-  function fractions(t) {
+  /* Games scored in points, where the total is the biggest number in the text even when it is written alone. */
+  const POINTS = { chainle: 5000, anno: 500, timeguessr: 50000 };
+  const MONTH = '(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)';
+
+  /* "4/6" style. With words = true it also reads "3159 of 5000" and "7 out of 9". */
+  function fractions(t, words) {
     const out = [];
-    for (const m of t.matchAll(/(?<![\w\/.,])(\d[\d,.]*|X)\s*\/\s*(\d[\d,.]*)(?![\d\/])/gi)) {
+    const re = words
+      ? /(?<![\w\/.,])(\d[\d,.]*|X)\s*(?:[\/⁄∕／]|\bout\s+of\b|\bof\b)\s*(\d[\d,.]*)(?![\d\/])/gi
+      : /(?<![\w\/.,])(\d[\d,.]*|X)\s*[\/⁄∕／]\s*(\d[\d,.]*)(?![\d\/])/gi;
+    for (const m of t.matchAll(re)) {
       const a = trimNum(m[1]).toUpperCase(), b = trimNum(m[2]);
       out.push({ text: a + '/' + b, den: Number(b.replace(/[,.](?=\d{3}\b)/g, '').replace(/,/g, '')) });
     }
     return out.filter(f => f.den > 0);
+  }
+
+  /* For a points game with no "out of" in its text: the biggest number that is not a puzzle number, date, time or percentage. */
+  function loneTotal(id, t, name) {
+    const total = POINTS[id];
+    if (!total) return '';
+    let best = null;
+    for (const m of t.matchAll(/(?<![\w.,#№\/:-])(\d{1,3}(?:,\d{3})+|\d+)(?![\w%\/:-]|[.,]\d)/g)) {
+      const before = t.slice(Math.max(0, m.index - 16), m.index).toLowerCase();
+      const after = t.slice(m.index + m[0].length, m.index + m[0].length + 14).toLowerCase();
+      if (/(puzzle|no\.?|day|game|round|#|№)\s*$/.test(before)) continue;
+      if (name && before.trimEnd().endsWith(name.toLowerCase())) continue;
+      if (new RegExp(MONTH + '[a-z]*\\.?,?\\s*$').test(before)) continue;
+      if (new RegExp('^(?:st|nd|rd|th)?\\s*(?:of\\s+)?' + MONTH).test(after)) continue;
+      const n = Number(m[1].replace(/,/g, ''));
+      if (n > total) continue;
+      if (!best || n > best.n) best = { n, text: m[1] };
+    }
+    return best ? best.text + '/' + total : '';
   }
 
   function labelled(t) {
@@ -361,10 +388,13 @@ td.num { font: 400 13px/1.5 var(--font-data); }
 
     /* 1. a fraction out of this game's known total, e.g. 4/6 for Wordle or 432/500 for ANNO */
     const fr = fractions(t);
-    if (TOTALS[id]) { const hit = fr.find(f => f.den === TOTALS[id]); if (hit) return hit.text; }
+    if (TOTALS[id]) { const hit = fractions(t, true).find(f => f.den === TOTALS[id]); if (hit) return hit.text; }
     /* 2. a number the game itself labels as the total */
     const lab = labelled(t);
     if (lab) return lab;
+    /* 2b. a points game that wrote its total as a bare number */
+    const lone = loneTotal(id, t, (GAMES.find(g => g.id === id) || {}).name);
+    if (lone) return lone;
     /* 3. several fractions: the total is the one out of the biggest number; if they tie, keep them all */
     if (fr.length) {
       const top = Math.max(...fr.map(f => f.den));
@@ -396,7 +426,7 @@ td.num { font: 400 13px/1.5 var(--font-data); }
   window.DailyRounds = { parseResult, extractScore, GAMES };
 
   /* ---------- state ---------- */
-  const PARSER = 2; /* bump when the score-reading rules change, so saved share texts are read again */
+  const PARSER = 3; /* bump when the score-reading rules change, so saved share texts are read again */
   const blank = () => ({ v: 1, pv: PARSER, days: {}, custom: [], removed: [], prefs: { hidePlayed: false } });
   let storageOK = true;
   let state = blank();
