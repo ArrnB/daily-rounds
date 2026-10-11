@@ -297,7 +297,10 @@ td.num { font: 400 13px/1.5 var(--font-data); }
   const guesses = n => n + (n === '1' ? ' guess' : ' guesses');
 
   /* Games scored in points, where the total is the biggest number in the text even when it is written alone. */
-  const POINTS = { chainle: 5000, anno: 500, timeguessr: 50000 };
+  const POINTS = {
+    chainle: { max: 5000, outOf: 5000 }, anno: { max: 500, outOf: 500 }, timeguessr: { max: 50000, outOf: 50000 },
+    krillion: { max: 1000 } /* a plain points score with no fixed total; the cap keeps the depth in metres out */
+  };
   const MONTH = '(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)';
 
   /* "4/6" style. With words = true it also reads "3159 of 5000" and "7 out of 9". */
@@ -315,21 +318,23 @@ td.num { font: 400 13px/1.5 var(--font-data); }
 
   /* For a points game with no "out of" in its text: the biggest number that is not a puzzle number, date, time or percentage. */
   function loneTotal(id, t, name) {
-    const total = POINTS[id];
-    if (!total) return '';
+    const cfg = POINTS[id];
+    if (!cfg) return '';
     let best = null;
     for (const m of t.matchAll(/(?<![\w.,#№\/:-])(\d{1,3}(?:,\d{3})+|\d+)(?![\w%\/:-]|[.,]\d)/g)) {
       const before = t.slice(Math.max(0, m.index - 16), m.index).toLowerCase();
       const after = t.slice(m.index + m[0].length, m.index + m[0].length + 14).toLowerCase();
-      if (/(puzzle|no\.?|day|game|round|#|№)\s*$/.test(before)) continue;
+      if (/(puzzle|no\.?|day|game|round|dive|level|edition|#|№)\s*$/.test(before)) continue;
       if (name && before.trimEnd().endsWith(name.toLowerCase())) continue;
       if (new RegExp(MONTH + '[a-z]*\\.?,?\\s*$').test(before)) continue;
       if (new RegExp('^(?:st|nd|rd|th)?\\s*(?:of\\s+)?' + MONTH).test(after)) continue;
       const n = Number(m[1].replace(/,/g, ''));
-      if (n > total) continue;
+      if (n > cfg.max) continue;
       if (!best || n > best.n) best = { n, text: m[1] };
     }
-    return best ? best.text + '/' + total : '';
+    if (!best) return '';
+    if (!cfg.outOf) return best.text;
+    return best.text + '/' + (best.text.includes(',') ? cfg.outOf.toLocaleString('en-US') : cfg.outOf);
   }
 
   function labelled(t) {
@@ -426,7 +431,7 @@ td.num { font: 400 13px/1.5 var(--font-data); }
   window.DailyRounds = { parseResult, extractScore, GAMES };
 
   /* ---------- state ---------- */
-  const PARSER = 3; /* bump when the score-reading rules change, so saved share texts are read again */
+  const PARSER = 4; /* bump when the score-reading rules change, so saved share texts are read again */
   const blank = () => ({ v: 1, pv: PARSER, days: {}, custom: [], removed: [], prefs: { hidePlayed: false } });
   let storageOK = true;
   let state = blank();
