@@ -263,6 +263,7 @@ td.num { font: 400 13px/1.5 var(--font-data); }
     ['time', 'Time and numbers'],
     ['words', 'Words'],
     ['trivia', 'Trivia'],
+    ['logic', 'Logic'],
     ['games', 'Video games'],
     ['yours', 'Your additions']
   ];
@@ -271,18 +272,22 @@ td.num { font: 400 13px/1.5 var(--font-data); }
     { id: 'geoguessr', group: 'maps', name: 'GeoGuessr', url: 'https://www.geoguessr.com/', desc: 'Dropped into a street view. Pin where you are.', match: /geo\s?guessr/i },
     { id: 'globle', group: 'maps', name: 'Globle', url: 'https://globle-game.com/game', desc: 'Find the mystery country by how close each guess is.', match: /globle/i },
     { id: 'maptap', group: 'maps', name: 'MapTap', url: 'https://maptap.gg/', desc: 'Tap the place on a world map. Scored by distance.', match: /map\s?tap/i },
+    { id: 'worldle', group: 'maps', name: 'Worldle', url: 'https://worldle.teuteuf.fr/', desc: 'Name the country from its outline.', match: /\bworldle\b/i },
     { id: 'tradle', group: 'maps', name: 'Tradle', url: 'https://games.oec.world/en/tradle', desc: 'Name the country from what it exports.', match: /tradle/i },
     { id: 'timeguessr', group: 'time', name: 'TimeGuessr', url: 'https://timeguessr.com/play?mode=daily', desc: 'Where and when was this photo taken?', match: /time\s?guessr/i },
+    { id: 'sizeitup', group: 'time', name: 'Size It Up', url: 'https://sizeitup.games/', desc: 'Resize a silhouette to match a real object. Five a day.', match: /size\s?it\s?up/i },
     { id: 'anno', group: 'time', name: 'ANNO', url: 'https://anno-game.netlify.app/', desc: 'Place five historical events on a timeline.', match: /\banno\b/i },
     { id: 'fermi', group: 'time', name: 'Fermi', url: 'https://fermi.gg/', desc: 'Three estimation questions, one guess each.', match: /\bfermi\b/i },
     { id: 'angle', group: 'time', name: 'Angle', url: 'https://angle.wtf/', desc: 'Guess the angle by eye in four tries.', match: /#angle\b|\bangle\s*#?\d|angle\.wtf/i },
     { id: 'wordle', group: 'words', name: 'Wordle', url: 'https://www.nytimes.com/games/wordle/index.html', desc: 'Five letters, six tries.', match: /\bwordle\b/i },
     { id: 'connections', group: 'words', name: 'Connections', url: 'https://www.nytimes.com/games/connections', desc: 'Sort 16 words into four hidden groups.', match: /\bconnections\b/i },
     { id: 'chainle', group: 'words', name: 'Chainle', url: 'https://chainle.io/', desc: 'Find the word that links the clues.', match: /chainle/i },
-    { id: 'redactle', group: 'words', name: 'Redactle', url: 'https://redactle.net/', desc: 'Uncover a blacked-out Wikipedia article.', match: /redactle/i },
+    { id: 'strands', group: 'words', name: 'Strands', url: 'https://www.nytimes.com/games/strands', desc: 'Find the themed words hidden in a letter grid.', match: /\bstrands\b/i },
+    { id: 'fridgle', group: 'words', name: 'Fridgle', url: 'https://fridgle.net/', desc: 'Write a poem from the day\u2019s fridge-magnet words.', match: /fridgle/i },
     { id: 'krillion', group: 'trivia', name: 'Krillion', url: 'https://krillion.io/', desc: 'Seven prompts. Rarer answers go deeper.', match: /krillion/i },
-    { id: 'googlefeud', group: 'trivia', name: 'Google Feud', url: 'https://googlefeud.com/', desc: 'Guess how Google finishes the search.', match: /google\s?feud|feudle/i },
     { id: 'metazooa', group: 'trivia', name: 'Metazooa', url: 'https://metazooa.com/', desc: 'Find the animal through its family tree.', match: /metazooa|animal\s*#\d+/i },
+    { id: 'cluesbysam', group: 'logic', name: 'Clues by Sam', url: 'https://cluesbysam.com/', desc: 'Deduce who is innocent and who is criminal. No guessing.', match: /clues\s?by\s?sam/i },
+    { id: 'pips', group: 'logic', name: 'Pips', url: 'https://www.nytimes.com/games/pips', desc: 'Place dominoes so every region\u2019s rule holds.', match: /\bpips\b/i },
     { id: 'pokedoku', group: 'games', name: 'Pokedoku', url: 'https://pokedoku.com/', desc: 'Fill a 3x3 grid with Pokémon that fit both labels.', match: /pok[eé]doku/i },
     { id: 'gamedle', group: 'games', name: 'Gamedle', url: 'https://www.gamedle.wtf/', desc: 'Name the video game from its cover art.', match: /gamedle/i },
     { id: 'guessthegame', group: 'games', name: 'GuessTheGame', url: 'https://guessthe.game/', desc: 'Name the game from six screenshots.', match: /guess\s?the\.?\s?game/i }
@@ -293,7 +298,7 @@ td.num { font: 400 13px/1.5 var(--font-data); }
   const trimNum = s => s.replace(/[.,]+$/, '');
 
   /* What each game's final score is out of. A share text can list every round; only the total counts. */
-  const TOTALS = { wordle: 6, tradle: 6, guessthegame: 6, angle: 4, timeguessr: 50000, anno: 500, chainle: 5000, pokedoku: 9 };
+  const TOTALS = { wordle: 6, worldle: 6, tradle: 6, guessthegame: 6, angle: 4, timeguessr: 50000, anno: 500, chainle: 5000, pokedoku: 9 };
   const guesses = n => n + (n === '1' ? ' guess' : ' guesses');
 
   /* Games scored in points, where the total is the biggest number in the text even when it is written alone. */
@@ -385,6 +390,12 @@ td.num { font: 400 13px/1.5 var(--font-data); }
       }
     }
     if (id === 'fermi') return fermiScore(t);
+    if (id === 'strands' && /[🔵🟡]/u.test(t)) {
+      const hints = chars(t).filter(c => c === '💡').length;
+      return hints ? hints + (hints > 1 ? ' hints' : ' hint') : 'No hints';
+    }
+    if ((id === 'pips' || id === 'cluesbysam') && (m = t.match(/(?<![\d:])(\d{1,2}:\d{2})(?![\d:])/))) return m[1];
+    if (id === 'cluesbysam' && (m = t.match(/in\s+(?:less\s+than\s+|under\s+)?(\d+)\s+min/i))) return '<' + m[1] + ' min';
     if (id === 'globle') {
       if ((m = t.match(/=\s*(\d+)/))) return guesses(m[1]);
       const sq = chars(t).filter(c => '🟥🟧🟨🟩'.includes(c)).length;
@@ -524,7 +535,9 @@ td.num { font: 400 13px/1.5 var(--font-data); }
   }
   const allGames = () => GAMES.concat(state.custom);
   const activeGames = () => allGames().filter(g => !state.removed.includes(g.id));
-  const gameName = id => { const g = allGames().find(x => x.id === id); return g ? g.name : id; };
+  /* Games taken off the built-in list, so their old history still shows a proper name. */
+  const RETIRED = { redactle: 'Redactle', googlefeud: 'Google Feud' };
+  const gameName = id => { const g = allGames().find(x => x.id === id); return g ? g.name : (RETIRED[id] || id); };
   const dayEntries = k => state.days[k] || {};
   const plural = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
 

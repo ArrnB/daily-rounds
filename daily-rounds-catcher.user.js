@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Daily Rounds share catcher
 // @namespace    daily-rounds
-// @version      1.0.0
+// @version      1.1.0
 // @description  When you tap Share in a daily game, the result is sent to your Daily Rounds page. No pasting.
 // @match        https://*.nytimes.com/games/*
 // @match        https://*.geoguessr.com/*
@@ -12,9 +12,11 @@
 // @match        https://*.fermi.gg/*
 // @match        https://*.angle.wtf/*
 // @match        https://*.chainle.io/*
-// @match        https://*.redactle.net/*
 // @match        https://*.krillion.io/*
-// @match        https://*.googlefeud.com/*
+// @match        https://*.sizeitup.games/*
+// @match        https://*.fridgle.net/*
+// @match        https://*.cluesbysam.com/*
+// @match        https://*.teuteuf.fr/*
 // @match        https://*.metazooa.com/*
 // @match        https://*.pokedoku.com/*
 // @match        https://*.gamedle.wtf/*
@@ -53,10 +55,10 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.0.0';
+  var VERSION = '1.1.0';
   var STATIC_HOSTS = ['github.io', 'netlify.app', 'pages.dev', 'localhost'];
   var GAME_HOSTS = ['nytimes.com', 'geoguessr.com', 'globle-game.com', 'maptap.gg', 'games.oec.world', 'timeguessr.com',
-    'anno-game.netlify.app', 'fermi.gg', 'angle.wtf', 'chainle.io', 'redactle.net', 'krillion.io', 'googlefeud.com',
+    'anno-game.netlify.app', 'fermi.gg', 'angle.wtf', 'chainle.io', 'krillion.io', 'sizeitup.games', 'fridgle.net', 'cluesbysam.com', 'teuteuf.fr',
     'metazooa.com', 'pokedoku.com', 'gamedle.wtf', 'guessthe.game'];
 
   var host = location.hostname.replace(/^www\./, '');

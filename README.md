@@ -11,7 +11,7 @@ score and ticks the game off for the day. It also tracks history and streaks.
 
 ## Features
 
-- **One-tap launcher** for 18 daily games, grouped by type with a progress strip for today
+- **One-tap launcher** for 22 daily games, grouped by type with a progress strip for today
 - **Share-text parser.** It recognises each game's share format (emoji grids,
   `4/6`-style scores, point totals, fractions) and files the result under the right game
 - **History and streaks** per game
