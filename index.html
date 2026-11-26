@@ -8,6 +8,16 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#111714">
 <meta name="mobile-web-app-capable" content="yes">
+<script>
+/* Apply the saved theme before first paint so the page does not flash the default colours. */
+(function () {
+  try {
+    var p = (JSON.parse(localStorage.getItem('daily-rounds-v1') || '{}').prefs) || {};
+    var t = p.theme;
+    if (t && /^(light|dark|sepia|rose|ocean|midnight|amoled)$/.test(t)) document.documentElement.setAttribute('data-theme', t);
+  } catch (e) {}
+})();
+</script>
 <style>:root{color-scheme:light}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>Daily Rounds</title>
 <meta name="daily-rounds" content="1">
@@ -27,12 +37,13 @@
   --done-soft: #dcefe3;
   --todo: #e1e6e1;
   --warn: #a8480f;
+  --fav: #e0245e;
   --font-display: "Bricolage Grotesque", "Trebuchet MS", "Segoe UI", sans-serif;
   --font-body: "Instrument Sans", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+  :root:not([data-theme]) {
     --paper: #111714; --surface: #1a221e; --ink: #e8eee9; --muted: #98a59d; --line: #2d3832;
     --accent: #93a6ff; --accent-ink: #0c1230; --done: #45b97a; --done-ink: #06210f;
     --done-soft: #1d3628; --todo: #28322c; --warn: #f0a068; color-scheme: dark;
@@ -42,6 +53,32 @@
   --paper: #111714; --surface: #1a221e; --ink: #e8eee9; --muted: #98a59d; --line: #2d3832;
   --accent: #93a6ff; --accent-ink: #0c1230; --done: #45b97a; --done-ink: #06210f;
   --done-soft: #1d3628; --todo: #28322c; --warn: #f0a068; color-scheme: dark;
+}
+/* Extra themes, picked from the top right. Each one sets the full palette, so none depends on the system setting. */
+:root[data-theme="sepia"] {
+  --paper: #f4ecdc; --surface: #fbf6ec; --ink: #2e2419; --muted: #76664f; --line: #e0d3bb;
+  --accent: #a4471c; --accent-ink: #ffffff; --done: #5f7d2f; --done-ink: #ffffff;
+  --done-soft: #e6e7cc; --todo: #e9dfca; --warn: #a3361a; --fav: #c0392b; color-scheme: light;
+}
+:root[data-theme="rose"] {
+  --paper: #fbf0f2; --surface: #ffffff; --ink: #2b1720; --muted: #7d5a68; --line: #ecd3db;
+  --accent: #c2185b; --accent-ink: #ffffff; --done: #2e8b57; --done-ink: #ffffff;
+  --done-soft: #f7dfe6; --todo: #f1e1e6; --warn: #b3401a; --fav: #d81b60; color-scheme: light;
+}
+:root[data-theme="ocean"] {
+  --paper: #0d1b2a; --surface: #132436; --ink: #e3edf7; --muted: #8ea3b8; --line: #22384e;
+  --accent: #4cc2ff; --accent-ink: #04121d; --done: #2ec4a6; --done-ink: #03201a;
+  --done-soft: #133a3a; --todo: #1c3046; --warn: #ffad66; --fav: #ff6b8b; color-scheme: dark;
+}
+:root[data-theme="midnight"] {
+  --paper: #17132a; --surface: #201b38; --ink: #ece8ff; --muted: #a59fc6; --line: #322b55;
+  --accent: #c4a7ff; --accent-ink: #1c0f3d; --done: #f5b942; --done-ink: #2a1b00;
+  --done-soft: #3a3020; --todo: #2a2448; --warn: #ff8f8f; --fav: #ff7aa8; color-scheme: dark;
+}
+:root[data-theme="amoled"] {
+  --paper: #000000; --surface: #0b0b0b; --ink: #ececec; --muted: #9a9a9a; --line: #262626;
+  --accent: #8ab4ff; --accent-ink: #00102e; --done: #3ddc84; --done-ink: #002611;
+  --done-soft: #0f2a1a; --todo: #1a1a1a; --warn: #ff9e5e; --fav: #ff5c7c; color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -53,7 +90,12 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 /* Masthead */
 .masthead { display: flex; flex-direction: column; gap: 14px; }
-.mast-top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; }
+.mast-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.mast-title { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.theme-pick { position: relative; display: inline-flex; align-items: center; flex: none; }
+.theme-pick svg { position: absolute; left: 10px; width: 16px; height: 16px; pointer-events: none; color: var(--muted); }
+.theme-pick select { appearance: none; -webkit-appearance: none; padding: 6px 12px 6px 32px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-size: 13px; font-weight: 500; cursor: pointer; }
+.theme-pick select:hover { border-color: var(--muted); }
 .mast-top h1 { font: 700 34px/1.05 var(--font-display); letter-spacing: -0.02em; }
 .mast-date { font: 400 13px/1.4 var(--font-data); color: var(--muted); }
 .progress { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
@@ -77,6 +119,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .btn-primary:hover { border-color: var(--accent); filter: brightness(1.08); }
 .btn-quiet { background: transparent; border-style: dashed; color: var(--muted); }
 .btn-danger { color: var(--warn); }
+.fav { padding: 0; width: 34px; height: 33px; justify-content: center; border-radius: 999px; color: var(--muted); }
+.fav svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+.fav[aria-pressed="true"] { color: var(--fav); border-color: var(--fav); }
+.fav[aria-pressed="true"] svg { fill: currentColor; }
+.fav.pop svg { animation: pop 0.3s ease; }
+@keyframes pop { 50% { transform: scale(1.3); } }
+.group-fav .group-head h2 { color: var(--fav); }
 .btn-score { font: 500 13px/1.3 var(--font-data); background: var(--done-soft); border-color: transparent; white-space: normal; text-align: left; }
 
 /* Paste box */
@@ -153,15 +202,21 @@ td.num { font: 400 13px/1.5 var(--font-data); }
 
 .toast { position: fixed; left: 50%; bottom: 0; transform: translateX(-50%); margin-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--paper); padding: 10px 14px; border-radius: 9px; display: flex; gap: 12px; align-items: center; max-width: calc(100% - 32px); font-size: 14px; z-index: 5; }
 .toast button { background: none; border: 0; color: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; padding: 0; }
-@media (prefers-reduced-motion: reduce) { .tile.flip { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .tile.flip, .fav.pop svg { animation: none; } }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header class="masthead">
     <div class="mast-top">
-      <h1>Daily Rounds</h1>
-      <span class="mast-date" id="mast-date"></span>
+      <div class="mast-title">
+        <h1>Daily Rounds</h1>
+        <span class="mast-date" id="mast-date"></span>
+      </div>
+      <label class="theme-pick" title="Theme">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 0 0 0 18c1.1 0 1.8-.8 1.8-1.7 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-.9.8-1.7 1.8-1.7H17a4 4 0 0 0 4-4c0-4.4-4-8.2-9-8.2Zm-5 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Zm3-4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Zm4 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Zm3 4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Z"/></svg>
+        <select id="theme" aria-label="Theme"></select>
+      </label>
     </div>
     <div class="progress">
       <span class="progress-count" id="progress-count">0</span>
@@ -185,6 +240,7 @@ td.num { font: 400 13px/1.5 var(--font-data); }
       <div class="paste-row">
         <textarea id="paste-box" rows="2" placeholder="Wordle 1,574 4/6"></textarea>
         <button class="btn" id="paste-save" type="button">Save result</button>
+        <button class="btn" id="paste-clip" type="button" hidden>Paste from clipboard</button>
       </div>
       <p class="hint" id="paste-hint">After a game, tap its Share button, then paste here. The result is filed under the right game and the game is ticked off.</p>
       <p class="msg" id="paste-msg" hidden></p>
@@ -443,7 +499,11 @@ td.num { font: 400 13px/1.5 var(--font-data); }
 
   /* ---------- state ---------- */
   const PARSER = 4; /* bump when the score-reading rules change, so saved share texts are read again */
-  const blank = () => ({ v: 1, pv: PARSER, days: {}, custom: [], removed: [], prefs: { hidePlayed: false } });
+  const THEMES = [
+    ['', 'Auto', null], ['light', 'Light', '#f1f4f0'], ['dark', 'Dark', '#111714'], ['sepia', 'Sepia', '#f4ecdc'],
+    ['rose', 'Rose', '#fbf0f2'], ['ocean', 'Ocean', '#0d1b2a'], ['midnight', 'Midnight', '#17132a'], ['amoled', 'Black (AMOLED)', '#000000']
+  ];
+  const blank = () => ({ v: 1, pv: PARSER, days: {}, custom: [], removed: [], favs: [], prefs: { hidePlayed: false, theme: '' } });
   let storageOK = true;
   let state = blank();
 
@@ -469,7 +529,11 @@ td.num { font: 400 13px/1.5 var(--font-data); }
       }
     }
     if (Array.isArray(raw.removed)) out.removed = raw.removed.filter(x => typeof x === 'string').slice(0, 200);
-    if (raw.prefs && typeof raw.prefs === 'object') out.prefs.hidePlayed = !!raw.prefs.hidePlayed;
+    if (Array.isArray(raw.favs)) out.favs = [...new Set(raw.favs.filter(x => typeof x === 'string').map(x => x.slice(0, 60)))].slice(0, 200);
+    if (raw.prefs && typeof raw.prefs === 'object') {
+      out.prefs.hidePlayed = !!raw.prefs.hidePlayed;
+      if (THEMES.some(t => t[0] === raw.prefs.theme)) out.prefs.theme = raw.prefs.theme;
+    }
     out.pv = Number(raw.pv) || 1;
     return out;
   }
@@ -603,12 +667,15 @@ td.num { font: 400 13px/1.5 var(--font-data); }
     const done = dayEntries(today), games = activeGames();
     $('hide-played').checked = state.prefs.hidePlayed;
     const out = [];
-    for (const [gid, label] of GROUPS) {
-      const inGroup = games.filter(g => (g.group || 'yours') === gid);
+    const favs = state.favs.map(id => games.find(g => g.id === id)).filter(Boolean);
+    const sections = [['fav', 'Favourites', favs]].concat(GROUPS.map(([gid, label]) =>
+      [gid, label, games.filter(g => (g.group || 'yours') === gid && !state.favs.includes(g.id))]));
+    for (const [gid, label, inGroup] of sections) {
       if (!inGroup.length) continue;
       const played = inGroup.filter(g => done[g.id]).length;
       const shown = state.prefs.hidePlayed ? inGroup.filter(g => !done[g.id] || editing === g.id) : inGroup;
-      out.push(h('div', { class: 'group' },
+      if (!shown.length) continue;
+      out.push(h('div', { class: 'group' + (gid === 'fav' ? ' group-fav' : '') },
         h('div', { class: 'group-head' }, h('h2', null, label), h('span', null, played + '/' + inGroup.length)),
         shown.map(g => gameRow(g, done[g.id]))
       ));
@@ -633,10 +700,16 @@ td.num { font: 400 13px/1.5 var(--font-data); }
       ? h('button', { class: 'btn btn-score', type: 'button', title: 'Change score', onclick: () => openEditor(g.id) }, entry.s)
       : h('button', { class: 'btn btn-quiet', type: 'button', onclick: () => openEditor(g.id) }, 'Add score');
     const play = h('a', { class: 'btn btn-primary', href: g.url, target: '_blank', rel: 'noopener noreferrer', onclick: () => { lastOpened = g.id; } }, 'Play ', h('span', { 'aria-hidden': 'true' }, '↗'));
+    const isFav = state.favs.includes(g.id);
+    const fav = h('button', {
+      class: 'btn fav' + (justFaved === g.id ? ' pop' : ''), type: 'button', 'aria-pressed': String(isFav),
+      'aria-label': (isFav ? 'Unpin ' : 'Pin ') + g.name + (isFav ? ' from' : ' to') + ' Favourites',
+      title: isFav ? 'Remove from Favourites' : 'Add to Favourites', onclick: () => toggleFav(g)
+    }, heart());
     const row = h('div', { class: 'game' + (isDone ? ' is-done' : ''), id: 'game-' + g.id },
       tile,
       h('div', { class: 'game-text' }, h('div', { class: 'game-name' }, g.name), g.desc ? h('div', { class: 'game-desc' }, g.desc) : null),
-      h('div', { class: 'game-actions' }, scoreBtn, play)
+      h('div', { class: 'game-actions' }, scoreBtn, play, fav)
     );
     if (editing === g.id) row.append(editorFor(g, entry));
     return row;
@@ -667,6 +740,39 @@ td.num { font: 400 13px/1.5 var(--font-data); }
       entry && entry.r ? h('details', { class: 'caught' }, h('summary', null, 'Text this score was read from'), h('pre', null, entry.r)) : null
     );
   }
+  let justFaved = null;
+  function heart() {
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('aria-hidden', 'true');
+    const path = document.createElementNS(ns, 'path');
+    path.setAttribute('d', 'M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2Z');
+    svg.append(path);
+    return svg;
+  }
+  function toggleFav(g) {
+    const was = state.favs.includes(g.id);
+    state.favs = was ? state.favs.filter(x => x !== g.id) : state.favs.concat(g.id);
+    justFaved = was ? null : g.id;
+    save(); renderToday(); justFaved = null;
+    const btn = document.querySelector('#game-' + CSS.escape(g.id) + ' .fav');
+    if (btn) btn.focus({ preventScroll: true });
+    toast(was ? g.name + ' removed from Favourites' : g.name + ' pinned to Favourites');
+  }
+
+  /* ---------- theme ---------- */
+  function applyTheme() {
+    const t = state.prefs.theme;
+    if (t) document.documentElement.setAttribute('data-theme', t); else document.documentElement.removeAttribute('data-theme');
+    const meta = document.querySelector('meta[name="theme-color"]');
+    const dark = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
+    const row = THEMES.find(x => x[0] === t);
+    if (meta) meta.setAttribute('content', (row && row[2]) || (dark ? '#111714' : '#f1f4f0'));
+    $('theme').value = t;
+  }
+  $('theme').replaceChildren(...THEMES.map(([v, label]) => h('option', { value: v }, label)));
+  $('theme').addEventListener('change', e => { state.prefs.theme = e.target.value; save(); applyTheme(); });
+
   function openEditor(id) { editing = id; pendingRaw = ''; wantFocus = true; renderToday(); }
   function closeEditor() { editing = null; pendingRaw = ''; renderToday(); }
 
@@ -708,6 +814,16 @@ td.num { font: 400 13px/1.5 var(--font-data); }
     e.preventDefault();
     if (fileResult(txt)) $('paste-box').value = ''; else $('paste-box').value = txt;
   });
+  if (navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
+    $('paste-clip').hidden = false;
+    $('paste-clip').addEventListener('click', async () => {
+      let txt = '';
+      try { txt = await navigator.clipboard.readText(); }
+      catch (e) { toast('The browser did not allow reading the clipboard. Long-press the box and paste instead.'); return; }
+      if (!txt.trim()) { toast('The clipboard is empty. Tap Share or Copy in the game first.'); return; }
+      if (!fileResult(txt)) $('paste-box').value = txt;
+    });
+  }
   $('paste-save').addEventListener('click', () => { if (fileResult($('paste-box').value)) $('paste-box').value = ''; });
   document.addEventListener('paste', e => {
     const el = e.target;
@@ -816,6 +932,7 @@ td.num { font: 400 13px/1.5 var(--font-data); }
       }
     }
     for (const c of parsed.custom) if (!allGames().some(g => g.id === c.id)) state.custom.push(c);
+    for (const id of parsed.favs) if (!state.favs.includes(id)) state.favs.push(id);
     state.pv = 1; refresh();
     save(); renderAll();
     toast('Restored ' + plural(added, 'result'));
@@ -878,12 +995,12 @@ td.num { font: 400 13px/1.5 var(--font-data); }
   }
 
   function fileCaught(items) {
-    const ids = [], filed = [];
+    const ids = [], filed = [], unknown = [];
     for (const it of items.slice(0, 300)) {
       if (!it || typeof it.id !== 'string' || typeof it.text !== 'string') continue;
       ids.push(it.id);
       const g = gameForCapture(it);
-      if (!g) continue;
+      if (!g) { unknown.push(it.text); continue; }
       let at = Number(it.t);
       if (!at || at > Date.now() + 86400000) at = Date.now();
       const day = dayKey(new Date(at));
@@ -896,6 +1013,12 @@ td.num { font: 400 13px/1.5 var(--font-data); }
       filed.push(g.name + (score ? ' ' + score : ''));
     }
     if (ids.length) tell({ type: 'ack', ids });
+    if (unknown.length) {
+      /* never drop a caught result silently: leave it in the paste box so it can be filed by hand */
+      $('paste-box').value = unknown[unknown.length - 1];
+      $('paste-msg').textContent = 'The share catcher caught a result but could not tell which game it is from. It is in the box above: use "Add score" on that game\'s row, or edit and save it.';
+      $('paste-msg').hidden = false;
+    }
     if (filed.length) {
       renderAll();
       toast(filed.length === 1 ? 'Caught ' + filed[0] : 'Caught ' + filed.length + ' results: ' + filed.join(', '));
@@ -915,7 +1038,7 @@ td.num { font: 400 13px/1.5 var(--font-data); }
       ? 'Connected. Tap Share in a game and its result is logged here by itself.'
       : (window.top !== window
         ? 'Not connected. The catcher cannot reach this page while it is open inside Claude. Open your own hosted copy of Daily Rounds instead.'
-        : 'Not connected. Install the Daily Rounds share catcher userscript in this browser, then reload this page.');
+        : 'Not connected. On Android you do not need it: install Daily Rounds to your home screen, then tap Share in a game and pick Daily Rounds from the share sheet. On a computer, or Firefox for Android, install the share catcher userscript in this browser and reload this page.');
     $('paste-hint').textContent = catcher
       ? 'The share catcher is on, so tapping Share in a game logs the result here by itself. Pasting still works for anything it misses.'
       : 'After a game, tap its Share button, then paste here. The result is filed under the right game and the game is ticked off.';
@@ -958,10 +1081,29 @@ td.num { font: 400 13px/1.5 var(--font-data); }
 
   load();
   refresh();
+  applyTheme();
+  if (window.matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
   const start = (location.hash || '').replace('#', '');
   if (start === 'history' || start === 'data') showTab(start);
   renderAll();
   tell({ type: 'pull' });
+
+  /* Share target: on Android, tapping Share in a game and choosing Daily Rounds opens this page with
+     ?title=&text=&url=. No extension is needed for this path. */
+  (function sharedIn() {
+    const q = new URLSearchParams(location.search);
+    if (!q.has('text') && !q.has('title') && !q.has('url')) return;
+    const parts = [];
+    for (const k of ['title', 'text', 'url']) {
+      const v = (q.get(k) || '').trim();
+      if (v && !parts.some(p => p.includes(v))) parts.push(v);
+    }
+    history.replaceState(null, '', location.pathname + location.hash);
+    const txt = parts.join('\n');
+    if (!txt) return;
+    showTab('today');
+    if (!fileResult(txt)) $('paste-box').value = txt;
+  })();
 
   if (window.claude && typeof window.claude.use === 'function') {
     window.claude.use('downloads').then(d => { downloads = d || null; renderData(); }).catch(() => {});

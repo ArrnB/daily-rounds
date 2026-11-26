@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Daily Rounds share catcher
 // @namespace    daily-rounds
-// @version      1.1.0
+// @version      1.2.0
 // @description  When you tap Share in a daily game, the result is sent to your Daily Rounds page. No pasting.
 // @match        https://*.nytimes.com/games/*
 // @match        https://*.geoguessr.com/*
@@ -27,6 +27,7 @@
 // @match        http://localhost/*
 // @noframes
 // @run-at       document-start
+// @sandbox      JavaScript
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_deleteValue
@@ -55,7 +56,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.1.0';
+  var VERSION = '1.2.0';
   var STATIC_HOSTS = ['github.io', 'netlify.app', 'pages.dev', 'localhost'];
   var GAME_HOSTS = ['nytimes.com', 'geoguessr.com', 'globle-game.com', 'maptap.gg', 'games.oec.world', 'timeguessr.com',
     'anno-game.netlify.app', 'fermi.gg', 'angle.wtf', 'chainle.io', 'krillion.io', 'sizeitup.games', 'fridgle.net', 'cluesbysam.com', 'teuteuf.fr',
