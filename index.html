@@ -238,7 +238,7 @@ td.num { font: 400 13px/1.5 var(--font-data); }
     <div class="paste">
       <label for="paste-box">Paste a result</label>
       <div class="paste-row">
-        <textarea id="paste-box" rows="2" placeholder="Wordle 1,574 4/6"></textarea>
+        <textarea id="paste-box" rows="2" autocomplete="off" placeholder="Wordle 1,574 4/6"></textarea>
         <button class="btn" id="paste-save" type="button">Save result</button>
         <button class="btn" id="paste-clip" type="button" hidden>Paste from clipboard</button>
       </div>
@@ -273,7 +273,7 @@ td.num { font: 400 13px/1.5 var(--font-data); }
         <button class="btn" id="backup-download" type="button" hidden>Download backup file</button>
         <button class="btn" id="backup-copy" type="button">Copy backup text</button>
       </div>
-      <textarea id="backup-text" rows="4" aria-label="Backup text" placeholder="Paste backup text here to restore it"></textarea>
+      <textarea id="backup-text" rows="4" autocomplete="off" aria-label="Backup text" placeholder="Paste backup text here to restore it"></textarea>
       <div class="row">
         <button class="btn" id="restore-text" type="button">Restore from text above</button>
         <label class="btn" for="restore-file">Restore from a file<input type="file" id="restore-file" accept=".json,application/json,text/plain" hidden></label>
