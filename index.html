@@ -662,6 +662,7 @@ td.num { font: 400 13px/1.5 var(--font-data); }
 
   /* ---------- render: today ---------- */
   let editing = null, justFlipped = null, pendingRaw = '', pendingScore = '', lastOpened = null;
+  const canReadClip = !!(navigator.clipboard && typeof navigator.clipboard.readText === 'function');
 
   function renderToday() {
     const done = dayEntries(today), games = activeGames();
@@ -699,7 +700,7 @@ td.num { font: 400 13px/1.5 var(--font-data); }
     const scoreBtn = entry && entry.s
       ? h('button', { class: 'btn btn-score', type: 'button', title: 'Change score', onclick: () => openEditor(g.id) }, entry.s)
       : h('button', { class: 'btn btn-quiet', type: 'button', onclick: () => openEditor(g.id) }, 'Add score');
-    const play = h('a', { class: 'btn btn-primary', href: g.url, target: '_blank', rel: 'noopener noreferrer', onclick: () => { lastOpened = g.id; } }, 'Play ', h('span', { 'aria-hidden': 'true' }, '↗'));
+    const play = h('a', { class: 'btn btn-primary', href: g.url, target: '_blank', rel: 'noopener noreferrer', onclick: () => { lastOpened = g.id; snapshotClip(); } }, 'Play ', h('span', { 'aria-hidden': 'true' }, '↗'));
     const isFav = state.favs.includes(g.id);
     const fav = h('button', {
       class: 'btn fav' + (justFaved === g.id ? ' pop' : ''), type: 'button', 'aria-pressed': String(isFav),
@@ -733,8 +734,30 @@ td.num { font: 400 13px/1.5 var(--font-data); }
       renderAll();
       toast(g.name + (v ? ': ' + v + ' saved' : ' ticked off'));
     };
+    /* one tap from the box that opens on return from a game, instead of scrolling up to the paste box */
+    const pasteIn = async () => {
+      let txt = '';
+      try { txt = await navigator.clipboard.readText(); }
+      catch (e) { toast('The browser did not allow reading the clipboard. Long-press the box and paste instead.'); return; }
+      if (!txt.trim()) { toast('The clipboard is empty. Tap Share or Copy in the game first.'); return; }
+      const r = parseResult(txt, activeGames());
+      const score = extractScore(g.id, txt);
+      if (r && r.id !== g.id) { fileResult(txt); return; }
+      if (!r && !score) {
+        pendingRaw = txt;
+        pendingScore = input.value = txt.replace(/\s+/g, ' ').trim().slice(0, 60);
+        input.focus();
+        toast('Could not read a ' + g.name + ' score from the clipboard. Check it and tap Save.');
+        return;
+      }
+      setEntry(g.id, score, txt);
+      editing = null; pendingRaw = ''; pendingScore = ''; justFlipped = entry ? null : g.id;
+      renderAll();
+      toast(g.name + (score ? ': ' + score + ' saved' : ' ticked off'));
+    };
     return h('div', { class: 'editor' },
       input,
+      canReadClip ? h('button', { class: 'btn', type: 'button', onclick: pasteIn }, 'Paste result') : null,
       h('button', { class: 'btn btn-primary', type: 'button', onclick: commit }, 'Save'),
       h('button', { class: 'btn', type: 'button', onclick: closeEditor }, 'Cancel'),
       entry && entry.r ? h('details', { class: 'caught' }, h('summary', null, 'Text this score was read from'), h('pre', null, entry.r)) : null
@@ -803,6 +826,7 @@ td.num { font: 400 13px/1.5 var(--font-data); }
     }
     const was = dayEntries(today)[r.id];
     setEntry(r.id, r.score, t);
+    if (editing === r.id) { editing = null; pendingRaw = ''; pendingScore = ''; }
     justFlipped = was ? null : r.id;
     renderAll();
     toast(r.name + (r.score ? ': ' + r.score + ' saved' : ' ticked off. Add the score on its row if you want one.'));
@@ -814,7 +838,35 @@ td.num { font: 400 13px/1.5 var(--font-data); }
     e.preventDefault();
     if (fileResult(txt)) $('paste-box').value = ''; else $('paste-box').value = txt;
   });
-  if (navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
+  /* Auto-catch: when the browser has already granted clipboard reading (Chrome and Samsung Internet
+     remember it once allowed), the result a game copied is filed on return with no tap. Firefox never
+     grants it without a tap, so there the score box with its Paste result button opens instead. */
+  let clipBefore = null;
+  async function clipGranted() {
+    try { return (await navigator.permissions.query({ name: 'clipboard-read' })).state === 'granted'; }
+    catch (e) { return false; }
+  }
+  async function snapshotClip() {
+    /* remember what was on the clipboard before the game, so a stale result is never filed as today's */
+    clipBefore = null;
+    if (!canReadClip || !(await clipGranted())) return;
+    try { clipBefore = (await navigator.clipboard.readText()).trim(); } catch (e) {}
+  }
+  function seenBefore(id, txt) {
+    return Object.keys(state.days).some(day => day !== today && state.days[day][id] && String(state.days[day][id].r || '').trim() === txt);
+  }
+  async function autoCatch(id) {
+    const before = clipBefore;
+    clipBefore = null;
+    if (!canReadClip || !(await clipGranted())) return false;
+    let txt = '';
+    try { txt = (await navigator.clipboard.readText()).trim(); } catch (e) { return false; }
+    if (!txt || txt === before || seenBefore(id, txt)) return false;
+    const r = parseResult(txt, activeGames());
+    if (!r || r.id !== id || dayEntries(today)[id]) return false;
+    return fileResult(txt);
+  }
+  if (canReadClip) {
     $('paste-clip').hidden = false;
     $('paste-clip').addEventListener('click', async () => {
       let txt = '';
@@ -1069,7 +1121,9 @@ td.num { font: 400 13px/1.5 var(--font-data); }
     lastOpened = null;
     if (!id) return;
     /* give the catcher a moment to deliver before offering the score box */
-    setTimeout(() => {
+    setTimeout(async () => {
+      if (dayEntries(today)[id] || $('today').hidden) return;
+      if (await autoCatch(id)) return;
       if (dayEntries(today)[id] || $('today').hidden) return;
       editing = id; pendingRaw = ''; wantFocus = false;
       renderToday();
