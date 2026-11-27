@@ -832,6 +832,7 @@ td.num { font: 400 13px/1.5 var(--font-data); }
     toast(r.name + (r.score ? ': ' + r.score + ' saved' : ' ticked off. Add the score on its row if you want one.'));
     return true;
   }
+  $('paste-box').addEventListener('input', () => { if (!$('paste-box').value.trim()) $('paste-msg').hidden = true; });
   $('paste-box').addEventListener('paste', e => {
     const txt = (e.clipboardData && e.clipboardData.getData('text')) || '';
     if (!txt) return;
@@ -1031,6 +1032,7 @@ td.num { font: 400 13px/1.5 var(--font-data); }
   let catcher = document.documentElement.getAttribute('data-daily-rounds-catcher') || '';
   const SELF = location.origin && location.origin !== 'null' ? location.origin : '*';
   const tell = msg => { try { window.postMessage(Object.assign({ src: 'daily-rounds-page' }, msg), SELF); } catch (e) {} };
+  const FIREFOX_ANDROID = /Android/i.test(navigator.userAgent) && /Firefox\//.test(navigator.userAgent);
   const bareHost = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return ''; } };
 
   function gameForCapture(item) {
@@ -1052,7 +1054,11 @@ td.num { font: 400 13px/1.5 var(--font-data); }
       if (!it || typeof it.id !== 'string' || typeof it.text !== 'string') continue;
       ids.push(it.id);
       const g = gameForCapture(it);
-      if (!g) { unknown.push(it.text); continue; }
+      if (!g) {
+        /* an unknown result from an earlier day (say a game since removed) cannot be filed for today; let it go */
+        if (dayKey(new Date(Number(it.t) || Date.now())) === today) unknown.push(it.text);
+        continue;
+      }
       let at = Number(it.t);
       if (!at || at > Date.now() + 86400000) at = Date.now();
       const day = dayKey(new Date(at));
@@ -1080,7 +1086,9 @@ td.num { font: 400 13px/1.5 var(--font-data); }
   window.addEventListener('message', e => {
     if (e.source !== window || !e.data || e.data.src !== 'daily-rounds-catcher') return;
     catcher = String(e.data.version || '1');
-    if (e.data.type === 'results' && Array.isArray(e.data.items)) fileCaught(e.data.items);
+    /* only the tab in front files results: a tab left open in the background would save its older copy
+       of the data over newer results. The catcher keeps what is not acknowledged for the next pull. */
+    if (e.data.type === 'results' && Array.isArray(e.data.items) && !document.hidden) fileCaught(e.data.items);
     renderCatcher();
   });
   window.addEventListener('focus', () => tell({ type: 'pull' }));
@@ -1090,7 +1098,9 @@ td.num { font: 400 13px/1.5 var(--font-data); }
       ? 'Connected. Tap Share in a game and its result is logged here by itself.'
       : (window.top !== window
         ? 'Not connected. The catcher cannot reach this page while it is open inside Claude. Open your own hosted copy of Daily Rounds instead.'
-        : 'Not connected. On Android you do not need it: install Daily Rounds to your home screen, then tap Share in a game and pick Daily Rounds from the share sheet. On a computer, or Firefox for Android, install the share catcher userscript in this browser and reload this page.');
+        : FIREFOX_ANDROID
+          ? 'Not connected. Firefox for Android cannot offer Daily Rounds in the share sheet, so the share catcher is the way to skip pasting here: install Violentmonkey from Firefox Add-ons, then the share catcher userscript, and reload this page. If it is installed, check that Violentmonkey is switched on.'
+          : 'Not connected. On Android in Chrome or Samsung Internet you do not need it: install Daily Rounds to your home screen, then tap Share in a game and pick Daily Rounds from the share sheet. On a computer, or Firefox for Android, install the share catcher userscript in this browser and reload this page.');
     $('paste-hint').textContent = catcher
       ? 'The share catcher is on, so tapping Share in a game logs the result here by itself. Pasting still works for anything it misses.'
       : 'After a game, tap its Share button, then paste here. The result is filed under the right game and the game is ticked off.';
@@ -1113,8 +1123,16 @@ td.num { font: 400 13px/1.5 var(--font-data); }
     const now = dayKey(new Date());
     if (now !== today) { today = now; editing = null; renderAll(); }
   }
+  /* Each open tab holds the data in memory and saves all of it, so take in what other tabs save;
+     otherwise a tab left open would save its older copy over newer results. */
+  window.addEventListener('storage', e => {
+    if (e.key !== KEY || e.newValue == null) return;
+    load(); applyTheme(); renderAll();
+  });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) return;
+    /* a background tab may have missed storage events while the browser had it paused */
+    load(); applyTheme(); renderAll();
     tick();
     tell({ type: 'pull' });
     const id = lastOpened;

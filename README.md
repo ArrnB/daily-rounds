@@ -27,8 +27,14 @@ score and ticks the game off for the day. It also tracks history and streaks.
 
 ## Share catcher (optional userscript)
 
-For desktop browsers and Firefox for Android. Chrome and Samsung Internet on Android can't run
-userscripts, so on those use the share sheet instead (see above).
+For desktop browsers and Firefox for Android. Firefox for Android can't show Daily Rounds in the share
+sheet, so there the catcher is the way to skip pasting: install
+[Violentmonkey](https://addons.mozilla.org/android/addon/violentmonkey/), then the script. Chrome and
+Samsung Internet on Android can't run userscripts, so on those use the share sheet instead (see above).
+
+Without the catcher, the score box that opens when you come back from a game has a **Paste result**
+button. Where the browser has already been allowed to read the clipboard (Chrome and Samsung Internet
+remember it), the result is saved on return without a tap.
 
 [`daily-rounds-catcher.user.js`](daily-rounds-catcher.user.js) removes the
 copy-paste step. Install it with Tampermonkey or Violentmonkey. When you press

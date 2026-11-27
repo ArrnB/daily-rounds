@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Daily Rounds share catcher
 // @namespace    daily-rounds
-// @version      1.2.0
+// @version      1.3.0
 // @description  When you tap Share in a daily game, the result is sent to your Daily Rounds page. No pasting.
 // @match        https://*.nytimes.com/games/*
 // @match        https://*.geoguessr.com/*
@@ -56,7 +56,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.2.0';
+  var VERSION = '1.3.0';
   var STATIC_HOSTS = ['github.io', 'netlify.app', 'pages.dev', 'localhost'];
   var GAME_HOSTS = ['nytimes.com', 'geoguessr.com', 'globle-game.com', 'maptap.gg', 'games.oec.world', 'timeguessr.com',
     'anno-game.netlify.app', 'fermi.gg', 'angle.wtf', 'chainle.io', 'krillion.io', 'sizeitup.games', 'fridgle.net', 'cluesbysam.com', 'teuteuf.fr',
@@ -112,6 +112,39 @@
       });
     });
 
+    /* copy-to-clipboard and similar libraries put the text on the clipboard inside their own copy
+       event and stop it spreading, so the page-wide copy listener never sees it. Catch it as it is set. */
+    attempt(function () {
+      var proto = own(w.DataTransfer && w.DataTransfer.prototype);
+      if (!proto || typeof proto.setData !== 'function') return;
+      var orig = proto.setData;
+      proto.setData = give(function (format, data) {
+        try { if (/^text(\/plain)?$/i.test(String(format))) emit(String(data)); } catch (e) {}
+        return orig.apply(this, arguments);
+      });
+    });
+
+    /* the older way: select some text, then document.execCommand('copy') */
+    attempt(function () {
+      var proto = own(w.Document && w.Document.prototype);
+      if (!proto || typeof proto.execCommand !== 'function') return;
+      var orig = proto.execCommand;
+      proto.execCommand = give(function (cmd) {
+        try {
+          if (String(cmd).toLowerCase() === 'copy') {
+            var a = this.activeElement;
+            var text = '';
+            if (a && (a.tagName === 'TEXTAREA' || a.tagName === 'INPUT') && typeof a.selectionStart === 'number') {
+              text = a.value.slice(a.selectionStart, a.selectionEnd);
+            }
+            if (!text) { var sel = this.getSelection && this.getSelection(); text = sel ? String(sel) : ''; }
+            if (text) emit(String(text));
+          }
+        } catch (e) {}
+        return orig.apply(this, arguments);
+      });
+    });
+
     attempt(function () {
       var proto = own(w.Navigator && w.Navigator.prototype);
       if (!proto || typeof proto.share !== 'function') return;
@@ -134,7 +167,8 @@
       try {
         var el = document.createElement('div');
         el.textContent = message;
-        el.setAttribute('style', 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:2147483647;' +
+        /* at the top: on phones the browser's own toolbar covers the bottom of the page */
+        el.setAttribute('style', 'position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top, 0px));transform:translateX(-50%);z-index:2147483647;' +
           'background:#16211c;color:#f1f4f0;font:500 14px/1.3 system-ui,sans-serif;padding:9px 14px;border-radius:9px;' +
           'box-shadow:0 4px 18px rgba(0,0,0,.3);pointer-events:none;max-width:90vw;text-align:center');
         (document.body || document.documentElement).appendChild(el);
@@ -214,7 +248,9 @@
     }
 
     window.addEventListener('message', function (e) {
-      if (e.source != window || !e.data || e.data.src !== 'daily-rounds-page') return;
+      /* not e.source == window: in Violentmonkey and Tampermonkey `window` here is a wrapper, so that
+         test never passes and the page's pull and ack messages were ignored. Same origin is the check. */
+      if (e.origin !== location.origin || !e.data || e.data.src !== 'daily-rounds-page') return;
       if (e.data.type === 'pull') send();
       if (e.data.type === 'ack' && e.data.ids) {
         for (var i = 0; i < e.data.ids.length; i++) {
