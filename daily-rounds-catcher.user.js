@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Daily Rounds share catcher
 // @namespace    daily-rounds
-// @version      1.3.0
+// @version      1.4.0
 // @description  When you tap Share in a daily game, the result is sent to your Daily Rounds page. No pasting.
 // @match        https://*.nytimes.com/games/*
 // @match        https://*.geoguessr.com/*
@@ -21,6 +21,12 @@
 // @match        https://*.pokedoku.com/*
 // @match        https://*.gamedle.wtf/*
 // @match        https://*.guessthe.game/*
+// @match        https://*.quintessential.fun/*
+// @match        https://pfiffel.com/*
+// @match        https://*.amountle.dev/*
+// @match        https://*.playfactual.com/*
+// @match        https://*.stackdle.dev/*
+// @match        https://*.scrandle.com/*
 // @match        https://*.netlify.app/*
 // @match        https://*.github.io/*
 // @match        https://*.pages.dev/*
@@ -56,11 +62,12 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.3.0';
+  var VERSION = '1.4.0';
   var STATIC_HOSTS = ['github.io', 'netlify.app', 'pages.dev', 'localhost'];
   var GAME_HOSTS = ['nytimes.com', 'geoguessr.com', 'globle-game.com', 'maptap.gg', 'games.oec.world', 'timeguessr.com',
     'anno-game.netlify.app', 'fermi.gg', 'angle.wtf', 'chainle.io', 'krillion.io', 'sizeitup.games', 'fridgle.net', 'cluesbysam.com', 'teuteuf.fr',
-    'metazooa.com', 'pokedoku.com', 'gamedle.wtf', 'guessthe.game'];
+    'metazooa.com', 'pokedoku.com', 'gamedle.wtf', 'guessthe.game',
+    'quintessential.fun', 'pfiffel.com', 'amountle.dev', 'playfactual.com', 'stackdle.dev', 'scrandle.com'];
 
   var host = location.hostname.replace(/^www\./, '');
   function under(h, list) { return list.some(function (d) { return h === d || h.endsWith('.' + d); }); }
