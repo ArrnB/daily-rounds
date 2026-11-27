@@ -201,6 +201,8 @@ td.num { font: 400 13px/1.5 var(--font-data); }
 .banner { background: var(--surface); border: 1px solid var(--warn); border-radius: 8px; padding: 10px 12px; color: var(--ink); }
 
 .toast { position: fixed; left: 50%; bottom: 0; transform: translateX(-50%); margin-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--paper); padding: 10px 14px; border-radius: 9px; display: flex; gap: 12px; align-items: center; max-width: calc(100% - 32px); font-size: 14px; z-index: 5; }
+/* on phones the browser's own toolbar covers the bottom of the page, and with it the Undo button */
+@media (pointer: coarse) { .toast { bottom: auto; top: 0; margin-bottom: 0; margin-top: calc(12px + env(safe-area-inset-top, 0px)); } }
 .toast button { background: none; border: 0; color: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; padding: 0; }
 @media (prefers-reduced-motion: reduce) { .tile.flip, .fav.pop svg { animation: none; } }
 </style>
@@ -360,8 +362,17 @@ td.num { font: 400 13px/1.5 var(--font-data); }
   /* Games scored in points, where the total is the biggest number in the text even when it is written alone. */
   const POINTS = {
     chainle: { max: 5000, outOf: 5000 }, anno: { max: 500, outOf: 500 }, timeguessr: { max: 50000, outOf: 50000 },
-    krillion: { max: 1000 } /* a plain points score with no fixed total; the cap keeps the depth in metres out */
+    krillion: { max: 1000 } /* a plain points score with no fixed total; the cap keeps the depth in metres out */,
+    geoguessr: { max: 25000, outOf: 25000 }, maptap: { max: 1000, outOf: 1000 }
   };
+  /* A bare number from a points game, written out of its total in one style: 12,439/25,000. */
+  function withTotal(id, text) {
+    const cfg = POINTS[id];
+    if (!cfg || !cfg.outOf || !/^\d{1,3}(?:,\d{3})*$|^\d+$/.test(text)) return text;
+    const n = Number(text.replace(/,/g, ''));
+    if (n > cfg.outOf) return text;
+    return n.toLocaleString('en-US') + '/' + cfg.outOf.toLocaleString('en-US');
+  }
   const MONTH = '(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)';
 
   /* "4/6" style. With words = true it also reads "3159 of 5000" and "7 out of 9". */
@@ -393,9 +404,7 @@ td.num { font: 400 13px/1.5 var(--font-data); }
       if (n > cfg.max) continue;
       if (!best || n > best.n) best = { n, text: m[1] };
     }
-    if (!best) return '';
-    if (!cfg.outOf) return best.text;
-    return best.text + '/' + (best.text.includes(',') ? cfg.outOf.toLocaleString('en-US') : cfg.outOf);
+    return best ? best.text : '';
   }
 
   function labelled(t) {
@@ -425,7 +434,8 @@ td.num { font: 400 13px/1.5 var(--font-data); }
     return all.map(c => c.v + '×').join(' · ').slice(0, 60);
   }
 
-  function extractScore(id, text) {
+  function extractScore(id, text) { return withTotal(id, readScore(id, text)); }
+  function readScore(id, text) {
     const t = String(text).replace(/ /g, ' ');
     let m;
     if (id === 'connections') {
@@ -498,7 +508,7 @@ td.num { font: 400 13px/1.5 var(--font-data); }
   window.DailyRounds = { parseResult, extractScore, GAMES };
 
   /* ---------- state ---------- */
-  const PARSER = 4; /* bump when the score-reading rules change, so saved share texts are read again */
+  const PARSER = 5; /* bump when the score-reading rules change, so saved share texts are read again */
   const THEMES = [
     ['', 'Auto', null], ['light', 'Light', '#f1f4f0'], ['dark', 'Dark', '#111714'], ['sepia', 'Sepia', '#f4ecdc'],
     ['rose', 'Rose', '#fbf0f2'], ['ocean', 'Ocean', '#0d1b2a'], ['midnight', 'Midnight', '#17132a'], ['amoled', 'Black (AMOLED)', '#000000']
