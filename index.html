@@ -370,7 +370,7 @@ td.num { font: 400 13px/1.5 var(--font-data); }
   const POINTS = {
     chainle: { max: 5000, outOf: 5000 }, anno: { max: 500, outOf: 500 }, timeguessr: { max: 50000, outOf: 50000 },
     krillion: { max: 1000 } /* a plain points score with no fixed total; the cap keeps the depth in metres out */,
-    geoguessr: { max: 25000, outOf: 25000 }, maptap: { max: 1000, outOf: 1000 }
+    geoguessr: { max: 25000, outOf: 25000 }, maptap: { max: 1000, outOf: 1000 }, factual: { max: 600, outOf: 600 }
   };
   /* A bare number from a points game, written out of its total in one style: 12,439/25,000. */
   function withTotal(id, text) {
@@ -463,6 +463,12 @@ td.num { font: 400 13px/1.5 var(--font-data); }
       }
     }
     if (id === 'fermi') return fermiScore(t);
+    /* "Cutle #369: 🎉 50:50 🎉" — the cut ratio; the date after it must not be read */
+    if (id === 'cutle' && (m = t.match(/(?<![\d.:])(\d{1,2}(?:\.\d+)?\s*:\s*\d{1,2}(?:\.\d+)?)(?![\d:])/))) return m[1].replace(/\s+/g, '');
+    /* "Quintessential … #1754 (article): 8 moves" */
+    if (id === 'quintessential' && (m = t.match(/(\d+)\s+(?:moves?|swaps?)\b/i))) return m[1] + (m[1] === '1' ? ' move' : ' moves');
+    /* "Stackdle #88\n16 cm" — tower height; not the "180 cm under par" line */
+    if (id === 'stackdle' && (m = t.match(/(?<![\w.])(\d+(?:\.\d+)?)\s*cm\b(?!\s*(?:under|over|below|above))/i))) return m[1] + ' cm';
     if (id === 'strands' && /[🔵🟡]/u.test(t)) {
       const hints = chars(t).filter(c => c === '💡').length;
       return hints ? hints + (hints > 1 ? ' hints' : ' hint') : 'No hints';
@@ -515,7 +521,7 @@ td.num { font: 400 13px/1.5 var(--font-data); }
   window.DailyRounds = { parseResult, extractScore, GAMES };
 
   /* ---------- state ---------- */
-  const PARSER = 5; /* bump when the score-reading rules change, so saved share texts are read again */
+  const PARSER = 6; /* bump when the score-reading rules change, so saved share texts are read again */
   const THEMES = [
     ['', 'Auto', null], ['light', 'Light', '#f1f4f0'], ['dark', 'Dark', '#111714'], ['sepia', 'Sepia', '#f4ecdc'],
     ['rose', 'Rose', '#fbf0f2'], ['ocean', 'Ocean', '#0d1b2a'], ['midnight', 'Midnight', '#17132a'], ['amoled', 'Black (AMOLED)', '#000000']
